@@ -21,6 +21,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, 
 import { Toaster, toast } from '@/components/ui/Toaster'
 import Badge, { StatusBadge } from '@/components/ui/Badge'
 import Avatar from '@/components/ui/Avatar'
+import Table, { TableHeader, TableBody, TableRow, TableCell } from '@/components/ui/Table'
 
 export default function DevTestPage() {
   const [date, setDate] = useState<string | Date | null>(null)
@@ -50,6 +51,30 @@ export default function DevTestPage() {
 
           <h2 className="text-lg font-semibold">TimePicker</h2>
           <TimePicker date={typeof date === 'string' ? date : (date ? (date as Date).toISOString().slice(0,10) : new Date().toISOString().slice(0,10))} value={time} onChange={setTime} />
+        </div>
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Table</h2>
+          <Table>
+            <TableHeader>
+              <tr>
+                <th className="px-3 py-2 text-left text-sm">Name</th>
+                <th className="px-3 py-2 text-left text-sm">Email</th>
+                <th className="px-3 py-2 text-left text-sm">Status</th>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell>John Doe</TableCell>
+                <TableCell>john@example.com</TableCell>
+                <TableCell><StatusBadge status="confirmed" /></TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>Jane Smith</TableCell>
+                <TableCell>jane@example.com</TableCell>
+                <TableCell><StatusBadge status="pending" /></TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
 
         <div className="space-y-4">

@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate:status": "drizzle-kit status",
+    "migrate:pending": "drizzle-kit pending",
+    "migrate:up": "drizzle-kit up",
+    "migrate:down": "drizzle-kit down"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.0.0",
@@ -37,5 +41,7 @@
     "shadcn-ui": "^0.9.5",
     "tailwindcss": "^4",
     "typescript": "^5"
+    ,
+    "drizzle-kit": "^0.9.0"
   }
 }
