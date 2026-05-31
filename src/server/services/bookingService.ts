@@ -3,18 +3,16 @@ import { bookings } from '../../lib/db/schema';
 
 export async function isResourceAvailable(resourceId: number, startAt: Date, endAt: Date) {
   // Drizzle API shapes may differ between versions; ignore strict types here for now
-  // @ts-ignore
   const q = await db
     .select()
     .from(bookings)
-    // @ts-ignore
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     .where(
-      // @ts-ignore
-      bookings.resourceId.eq(resourceId).and(
-        // @ts-ignore
-        bookings.startAt.lt(endAt).and(bookings.endAt.gt(startAt)),
+      (bookings.resourceId as any).eq(resourceId).and(
+        (bookings.startAt as any).lt(endAt).and((bookings.endAt as any).gt(startAt)),
       ),
     )
+    /* eslint-enable @typescript-eslint/no-explicit-any */
     .limit(1);
 
   return q.length === 0;

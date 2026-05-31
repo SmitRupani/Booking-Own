@@ -1,37 +1,37 @@
-"use client";
-import React from 'react';
+import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
 
-function cn(...parts: Array<string | false | null | undefined>) {
-  return parts.filter(Boolean).join(' ');
-}
+const buttonVariants = cva(
+  'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none',
+  {
+    variants: {
+      variant: {
+        default: 'bg-primary text-white hover:bg-primary/90',
+        ghost: 'bg-transparent hover:bg-muted/10',
+      },
+      size: {
+        default: 'h-10 py-2 px-4',
+        sm: 'h-9 px-3',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
+  }
+)
 
-type Variant = 'default' | 'ghost' | 'destructive';
+export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants>
 
-export function Button({
-  children,
-  variant = 'default',
-  size = 'md',
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'sm'|'md'|'lg'; className?: string }) {
-  const base = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none';
-  const variants: Record<Variant, string> = {
-    default: 'bg-primary text-white hover:bg-primary/90 px-3 py-2',
-    ghost: 'bg-transparent text-foreground hover:bg-muted/20 px-2 py-1',
-    destructive: 'bg-red-600 text-white hover:bg-red-700 px-3 py-2',
-  } as const;
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, ...props }, ref) => (
+    <button ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props} />
+  )
+)
 
-  const sizes: Record<string,string> = {
-    sm: 'text-sm',
-    md: 'text-base',
-    lg: 'text-lg',
-  };
+Button.displayName = 'Button'
 
-  return (
-    <button className={cn(base, variants[variant], sizes[size], className)} {...props}>
-      {children}
-    </button>
-  );
-}
-
-export default Button;
+export default Button
+export { Button, buttonVariants }

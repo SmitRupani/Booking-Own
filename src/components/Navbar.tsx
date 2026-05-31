@@ -6,14 +6,62 @@ import { Button } from './ui/Button';
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const [role, setRole] = useState<'STUDENT' | 'ADMIN' | 'GUARD'>('STUDENT');
 
-  const links = [
-    { href: '/user/dashboard', label: 'Dashboard' },
-    { href: '/user/facilities', label: 'Facilities' },
-    { href: '/user/rooms', label: 'Rooms' },
-    { href: '/user/equipment', label: 'Equipment' },
-    { href: '/user/bookings', label: 'My Bookings' },
-  ];
+  // Read role from localStorage for development/testing. Later integrate Clerk.
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      const r = (localStorage.getItem('sst:role') as 'STUDENT' | 'ADMIN' | 'GUARD') || 'STUDENT';
+      setRole(r);
+    }
+  });
+
+  const setRoleAndSave = (r: 'STUDENT' | 'ADMIN' | 'GUARD') => {
+    setRole(r);
+    if (typeof window !== 'undefined') localStorage.setItem('sst:role', r);
+  };
+
+  const getNavLinks = () => {
+    if (role === 'GUARD') {
+      return [
+        { href: '/guard/scanner', label: 'Scanner' },
+        { href: '/guard/returns', label: 'Equipment Returns' },
+        { href: '/guard/library-returns', label: 'Library Returns' },
+        { href: '/guard/history', label: 'History' },
+      ];
+    }
+
+    if (role === 'ADMIN') {
+      return [
+        { href: '/admin/dashboard', label: 'Dashboard' },
+        { href: '/admin/resources', label: 'Resources' },
+        { href: '/admin/lab-approvals', label: 'Approvals' },
+        { href: '/admin/bookings', label: 'Bookings' },
+        { href: '/admin/group-bookings', label: 'Group Bookings' },
+        { href: '/admin/blocks', label: 'Blocks' },
+        { href: '/admin/penalties', label: 'Penalties' },
+        { href: '/admin/settings', label: 'Settings' },
+        { href: '/admin/email-routing', label: 'Email Routing' },
+        { href: '/admin/audit-logs', label: 'Audit Logs' },
+        { href: '/admin/bulk-operations', label: 'Bulk Ops' },
+        { href: '/admin/analytics', label: 'Analytics' },
+      ];
+    }
+
+    // STUDENT
+    return [
+      { href: '/user/dashboard', label: 'Dashboard' },
+      { href: '/user/facilities', label: 'Facilities' },
+      { href: '/user/rooms', label: 'Rooms' },
+      { href: '/user/equipment', label: 'Equipment' },
+      { href: '/user/library', label: 'Library' },
+      { href: '/user/group-invitations', label: 'Group Invites' },
+      { href: '/user/bookings', label: 'My Bookings' },
+      { href: '/user/penalties', label: 'Rules & Penalties' },
+    ];
+  };
+
+  const links = getNavLinks();
 
   return (
     <nav className="border-b bg-card/80 backdrop-blur-md">
@@ -30,6 +78,19 @@ export function Navbar() {
                 {l.label}
               </Link>
             ))}
+
+            {/* Role selector for testing; replace with real auth UI when Clerk is integrated */}
+            <select
+              value={role}
+              onChange={(e) => setRoleAndSave(e.target.value as 'STUDENT' | 'ADMIN' | 'GUARD')}
+              className="bg-transparent text-sm border rounded px-2 py-1 ml-2"
+              aria-label="Role selector"
+            >
+              <option value="STUDENT">Student</option>
+              <option value="ADMIN">Admin</option>
+              <option value="GUARD">Guard</option>
+            </select>
+
             <Button variant="ghost">Sign Out</Button>
           </div>
 

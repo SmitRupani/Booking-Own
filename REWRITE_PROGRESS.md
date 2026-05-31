@@ -30,6 +30,26 @@ This file records the actions taken while applying the Fresh Next.js Rewrite bri
 	- `src/app/user/rooms/page.tsx`
 	- `src/app/user/equipment/page.tsx`
 
+9. Added shadcn-style UI primitives and theme tokens:
+	- `src/components/ui/Card.tsx`
+	- `src/components/ui/Badge.tsx`
+	- `src/components/ui/Input.tsx`
+	- Updated `src/app/globals.css` with SST-like theme tokens and utilities
+	- Refactored `src/app/page.tsx` and `src/app/user/dashboard/page.tsx` to use `Card` and `Badge`.
+
+10. Added further UI primitives and scaffolded remaining pages:
+	- `src/components/ui/Table.tsx`, `Dialog.tsx`, `EmptyState.tsx`, `Sidebar.tsx`
+	- Expanded `Navbar` with full user/admin/guard routes
+	- User pages: `bookings`, `group-invitations`, `penalties`
+	- Admin pages: `dashboard`, `resources`, `lab-approvals`, `bookings`, `group-bookings`, `blocks`, `penalties`, `settings`, `email-routing`, `audit-logs`, `bulk-operations`, `analytics`
+	- Guard pages: `scanner`, `returns`, `library-returns`, `history`
+
+These are UI scaffolds only — they use the shadcn-style primitives added earlier.
+
+11. Fixed visual and navigation issues:
+	- Enabled dark theme by default in `src/app/layout.tsx` (added `dark` class on html root) to apply the shadcn dark tokens and prevent a white background.
+	- Made `Navbar` role-aware in `src/components/Navbar.tsx` and added a dev role selector (localStorage-backed) to test Student/Admin/Guard-specific navigation. Replaceable by Clerk auth integration.
+
 ## Next Steps (recommended)
 
 - Install dependencies (`pnpm install` or `npm install`) and verify the app builds.
@@ -41,3 +61,10 @@ This file records the actions taken while applying the Fresh Next.js Rewrite bri
 ---
 
 If you'd like, I can run the next steps now (install deps, wire Clerk into layout, or add more domain tables). Which would you like me to do next?
+
+## Recent edits (2026-05-31)
+
+- Added compatibility wrapper for `Card` to preserve default imports: `src/components/ui/Card.tsx`.
+- Replaced `src/components/ui/Button.tsx` with a small wrapper that re-exports the shadcn `button` implementation (`src/components/ui/button.tsx`) to avoid duplicate export issues.
+
+These changes make the codebase resilient to the shadcn CLI's lowercase component filenames while keeping existing imports stable.
