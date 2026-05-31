@@ -3,6 +3,23 @@ import { Pool } from 'pg';
 const connectionString = process.env.DATABASE_URL ?? 'postgres://booking_user:booking_password@localhost:5432/booking_own';
 const pool = new Pool({ connectionString });
 
+const seedTarget = process.argv[2] ?? 'all';
+
+function shiftDate({ days = 0, hours = 0, minutes = 0 }) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  date.setHours(date.getHours() + hours);
+  date.setMinutes(date.getMinutes() + minutes);
+  return date.toISOString();
+}
+
+function fixedTime(daysFromToday, hours, minutes = 0) {
+  const date = new Date();
+  date.setDate(date.getDate() + daysFromToday);
+  date.setHours(hours, minutes, 0, 0);
+  return date.toISOString();
+}
+
 async function main() {
   const client = await pool.connect();
 
@@ -36,6 +53,8 @@ async function main() {
     `);
 
     await client.query('TRUNCATE TABLE bookings, resources, users RESTART IDENTITY CASCADE;');
+
+    console.log(`Seeding ${seedTarget} fixtures...`);
 
     await client.query(
       `INSERT INTO users (clerk_id, name, email)
@@ -72,6 +91,33 @@ async function main() {
         'Conference Room 2',
         'room',
         12,
+      ],
+    );
+
+    await client.query(
+      `INSERT INTO bookings (resource_id, user_id, start_at, end_at)
+       VALUES
+         ($1, $2, $3, $4),
+         ($5, $6, $7, $8),
+         ($9, $10, $11, $12),
+         ($13, $14, $15, $16)`,
+      [
+        1,
+        1,
+        fixedTime(-3, 9),
+        fixedTime(-3, 11),
+        2,
+        2,
+        shiftDate({ hours: -2 }),
+        shiftDate({ hours: 1 }),
+        3,
+        1,
+        fixedTime(1, 14),
+        fixedTime(1, 16),
+        4,
+        2,
+        fixedTime(2, 10),
+        fixedTime(2, 12),
       ],
     );
 
