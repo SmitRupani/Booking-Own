@@ -68,3 +68,8 @@ If you'd like, I can run the next steps now (install deps, wire Clerk into layou
 - Replaced `src/components/ui/Button.tsx` with a small wrapper that re-exports the shadcn `button` implementation (`src/components/ui/button.tsx`) to avoid duplicate export issues.
 
 These changes make the codebase resilient to the shadcn CLI's lowercase component filenames while keeping existing imports stable.
+
+- Added `Modal` and `ConfirmModal` (adapted from bookingCopy) using the Radix-backed `Dialog` at `src/components/ui/Modal.tsx`.
+
+- Migrated `DatePicker` and `CompactTimePicker` into `src/components/ui/DatePicker.tsx` and `src/components/ui/CompactTimePicker.tsx`.
+- Migrated `TimePicker` and `Tabs` into `src/components/ui/TimePicker.tsx` and `src/components/ui/Tabs.tsx`.

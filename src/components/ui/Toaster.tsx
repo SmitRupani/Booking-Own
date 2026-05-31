@@ -1,9 +1,40 @@
-"use client";
-import * as React from 'react'
+'use client'
+
+import { Toaster as SonnerToaster } from 'sonner'
 
 export function Toaster() {
-  // Placeholder: keep a DOM node for toast libraries to mount into
-  return <div id="toaster-root" className="fixed bottom-4 right-4 z-50" />
+  return (
+    <SonnerToaster
+      position="top-right"
+      expand={true}
+      richColors
+      closeButton
+      toastOptions={{
+        style: {
+          background: 'rgba(10, 15, 26, 0.95)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(12px)',
+          color: '#E6EAF0',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(13, 140, 232, 0.1)',
+          borderRadius: '12px',
+          fontSize: '14px',
+        },
+        classNames: {
+          toast: 'toast-glass',
+          title: 'toast-title',
+          description: 'toast-description',
+          actionButton: 'toast-action',
+          cancelButton: 'toast-cancel',
+          closeButton: 'toast-close',
+          success: 'toast-success',
+          error: 'toast-error',
+          warning: 'toast-warning',
+          info: 'toast-info',
+        },
+      }}
+    />
+  )
 }
 
-export default Toaster
+export { toast } from 'sonner'
+ 
