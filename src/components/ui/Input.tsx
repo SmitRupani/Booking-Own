@@ -1,13 +1,30 @@
 "use client";
-import React from 'react';
+import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '@/lib/utils'
 
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={"w-full rounded-md border px-3 py-2 bg-transparent text-white placeholder:text-muted-foreground " + (props.className || '')}
-    />
-  );
-}
+const inputVariants = cva('flex h-10 w-full rounded-md border px-3 py-2 bg-transparent text-card-foreground placeholder:text-muted-foreground', {
+  variants: {
+    variant: {
+      default: '',
+      subtle: 'bg-muted/10',
+    },
+    size: {
+      default: 'h-10',
+      sm: 'h-8',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+    size: 'default',
+  },
+})
 
-export default Input;
+export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & VariantProps<typeof inputVariants>
+
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ className, variant, size, ...props }, ref) => {
+  return <input ref={ref} className={cn(inputVariants({ variant, size }), className)} {...props} />
+})
+Input.displayName = 'Input'
+
+export default Input
