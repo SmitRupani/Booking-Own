@@ -1,26 +1,30 @@
 @import "tailwindcss";
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Core theme tokens (adapted from SST theme for a closer visual match) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --bg-dark: #0a0f1a;
+  --card: #0f1720;
+  --card-foreground: #E6EAF0;
+  --text-main: #E6EAF0;
+  --text-muted: #AEB6C6;
+  --primary: #0D8CE8;
+  --accent: #7A3CFF;
+  --radius: 12px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: linear-gradient(180deg, #071022 0%, #07111a 100%);
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
 }
+
+.bg-card { background-color: rgba(15,23,32,0.6); }
+.text-muted-foreground { color: var(--text-muted); }
+.border { border-color: rgba(255,255,255,0.06); }
+.rounded-lg { border-radius: var(--radius); }
+.card-shadow { box-shadow: 0 6px 18px rgba(2,6,23,0.6); }
+
