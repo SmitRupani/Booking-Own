@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS resources (
   id serial PRIMARY KEY,
   name text NOT NULL,
+  category text NOT NULL,
   capacity integer DEFAULT 1 NOT NULL
 );
 

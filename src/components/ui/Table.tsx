@@ -22,8 +22,12 @@ export function TableRow({ children, className }: { children: React.ReactNode; c
   return <tr className={cn('border-t border-border/20', className)}>{children}</tr>
 }
 
-export function TableCell({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <td className={cn('px-3 py-2 text-sm', className)}>{children}</td>
+export function TableCell({ children, className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement> & { children: React.ReactNode }) {
+  return (
+    <td className={cn('px-3 py-2 text-sm', className)} {...props}>
+      {children}
+    </td>
+  )
 }
 
 export default Table

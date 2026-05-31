@@ -13,6 +13,7 @@ export const users = pgTable('users', {
 export const resources = pgTable('resources', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
+  category: text('category').notNull(),
   capacity: integer('capacity').default(1).notNull(),
 });
 

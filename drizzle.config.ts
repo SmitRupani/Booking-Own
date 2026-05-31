@@ -1,6 +1,4 @@
-import type { Config } from 'drizzle-kit';
-
-const config: Config = {
+const config = {
   schema: 'src/lib/db/schema.ts',
   out: 'drizzle/migrations',
   driver: 'pg',
