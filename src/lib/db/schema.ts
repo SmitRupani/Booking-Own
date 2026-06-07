@@ -35,3 +35,14 @@ export const blocks = pgTable('blocks', {
   createdBy: integer('created_by'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const auditLogs = pgTable('audit_logs', {
+  id: serial('id').primaryKey(),
+  action: text('action').notNull(),
+  actorId: integer('actor_id'),
+  actorName: text('actor_name'),
+  targetType: text('target_type'),
+  targetId: integer('target_id'),
+  message: text('message'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
