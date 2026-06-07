@@ -18,6 +18,8 @@
     "migrate:pending": "drizzle-kit pending",
     "migrate:up": "drizzle-kit up",
     "migrate:down": "drizzle-kit down"
+    ,"dev:docker": "docker compose up --build",
+    "setup:hooks": "sh ./scripts/install-git-hooks.sh"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.0.0",

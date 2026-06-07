@@ -49,10 +49,20 @@ async function main() {
         created_at timestamptz DEFAULT now() NOT NULL
       );
 
+      CREATE TABLE IF NOT EXISTS blocks (
+        id serial PRIMARY KEY,
+        resource_id integer NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+        start_at timestamptz NOT NULL,
+        end_at timestamptz NOT NULL,
+        reason text,
+        created_by integer,
+        created_at timestamptz DEFAULT now() NOT NULL
+      );
+
       ALTER TABLE resources ADD COLUMN IF NOT EXISTS category text NOT NULL DEFAULT 'general';
     `);
 
-    await client.query('TRUNCATE TABLE bookings, resources, users RESTART IDENTITY CASCADE;');
+    await client.query('TRUNCATE TABLE blocks, bookings, resources, users RESTART IDENTITY CASCADE;');
 
     console.log(`Seeding ${seedTarget} fixtures...`);
 
@@ -77,7 +87,9 @@ async function main() {
          ($1, $2, $3),
          ($4, $5, $6),
          ($7, $8, $9),
-         ($10, $11, $12)`,
+         ($10, $11, $12),
+         ($13, $14, $15),
+         ($16, $17, $18)`,
       [
         'Main Football Ground',
         'facility',
@@ -91,6 +103,12 @@ async function main() {
         'Conference Room 2',
         'room',
         12,
+        'Tennis Racket Set',
+        'equipment',
+        8,
+        'Lab Microscope Kit',
+        'equipment',
+        6,
       ],
     );
 
@@ -118,6 +136,24 @@ async function main() {
         2,
         fixedTime(2, 10),
         fixedTime(2, 12),
+      ],
+    );
+
+    // Blocks are admin-managed closed times for resources
+    await client.query(
+      `INSERT INTO blocks (resource_id, start_at, end_at, reason)
+       VALUES
+         ($1, $2, $3, $4),
+         ($5, $6, $7, $8)`,
+      [
+        1,
+        fixedTime(0, 12),
+        fixedTime(0, 14),
+        'Maintenance window',
+        2,
+        fixedTime(3, 8),
+        fixedTime(3, 12),
+        'Reserved for tournament',
       ],
     );
 

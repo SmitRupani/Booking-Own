@@ -25,3 +25,13 @@ export const bookings = pgTable('bookings', {
   endAt: timestamp('end_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const blocks = pgTable('blocks', {
+  id: serial('id').primaryKey(),
+  resourceId: integer('resource_id').notNull(),
+  startAt: timestamp('start_at').notNull(),
+  endAt: timestamp('end_at').notNull(),
+  reason: text('reason'),
+  createdBy: integer('created_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});

@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# Pre-push hook: run production build and abort push if it fails
+echo "Running npm run build to validate production build before push..."
+if ! npm run build --silent; then
+  echo "\nERROR: 'npm run build' failed. Aborting push. Fix build errors before pushing." >&2
+  exit 1
+fi

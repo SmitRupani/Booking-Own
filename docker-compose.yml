@@ -36,11 +36,21 @@ services:
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "1000"
+      # When set to 1, our next.config.ts will skip the turbopack option and
+      # allow Next to run with the webpack watcher which tends to be more
+      # reliable in containerized development.
+      DISABLE_TURBOPACK: "1"
     ports:
       - "3000:3000"
     volumes:
       - .:/app
       - booking-own-node-modules:/app/node_modules
+    # Force the dev command with turbopack disabled so arguments are passed
+    # consistently when docker compose starts the container. Use a small
+    # shell wrapper that sets the internal NEXT_PRIVATE_TURBOPACK env var to
+    # disable turbopack and fall back to the webpack watcher which is more
+    # reliable inside container mounts.
+    command: ["sh", "-c", "export NEXT_PRIVATE_TURBOPACK=0; npm run dev -- --hostname 0.0.0.0"]
 
 volumes:
   booking-own-postgres-data:

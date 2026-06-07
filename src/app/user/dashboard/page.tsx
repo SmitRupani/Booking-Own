@@ -55,25 +55,17 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8 p-6">
-      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-accent-blue/10 via-accent-purple-1/5 to-transparent p-6 md:p-8">
-        <div className="absolute right-0 top-0 h-48 w-48 translate-x-1/2 -translate-y-1/2 rounded-full bg-accent-blue/10 blur-3xl" />
-        <div className="absolute bottom-0 left-0 h-40 w-40 -translate-x-1/2 translate-y-1/2 rounded-full bg-accent-purple-1/10 blur-3xl" />
-
-        <div className="relative space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-3xl">{greeting.emoji}</span>
-            <Badge variant="info">Live DB view</Badge>
-            <Badge variant={upcomingBookings.length > 0 ? 'success' : 'secondary'}>
-              {upcomingBookings.length > 0 ? 'Bookings queued' : 'Schedule clear'}
-            </Badge>
-          </div>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            {greeting.text}, your dashboard is connected to the seeded database.
-          </h2>
-          <p className="max-w-3xl text-sm text-muted-foreground md:text-base">
-            This view mirrors the richer source app structure with quick actions, booking summaries, and recent activity, but keeps the Booking Own shadcn styling.
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{greeting.emoji}</span>
+          <Badge variant="secondary">Live DB view</Badge>
         </div>
+        <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          {greeting.text}, your dashboard is connected to the seeded database.
+        </h2>
+        <p className="max-w-3xl text-sm text-muted-foreground md:text-base">
+          This keeps the source app&apos;s booking overview shape, but uses simpler shadcn cards and minimal motion.
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -88,20 +80,20 @@ export default async function DashboardPage() {
             <h3 className="text-xl font-semibold">Quick Actions</h3>
             <p className="text-sm text-muted-foreground">Direct links to the core booking flows.</p>
           </div>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/user/bookings">View all bookings</Link>
-          </Button>
+          <Link href="/user/bookings" className="inline-flex h-9 items-center justify-center rounded-md bg-transparent px-3 text-sm font-medium transition-colors hover:bg-muted/10">
+            View all bookings
+          </Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => (
             <Link key={action.href} href={action.href} className="group">
-              <Card className="h-full cursor-pointer border transition-all duration-300 hover:-translate-y-1 hover:border-accent-blue/30 hover:shadow-card-glow">
+              <Card className="h-full cursor-pointer border transition-colors hover:border-accent-blue/30">
                 <CardHeader className="space-y-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-blue/10 text-3xl transition-transform group-hover:scale-110">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-3xl">
                     {action.emoji}
                   </div>
                   <div>
-                    <CardTitle className="text-lg group-hover:text-accent-blue">{action.title}</CardTitle>
+                    <CardTitle className="text-lg">{action.title}</CardTitle>
                     <CardDescription>{action.description}</CardDescription>
                   </div>
                 </CardHeader>

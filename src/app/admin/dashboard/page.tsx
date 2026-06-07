@@ -30,20 +30,17 @@ export default async function AdminDashboard() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 p-6">
-      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-accent-blue/10 via-accent-purple-1/5 to-transparent p-6 md:p-8">
-        <div className="absolute right-0 top-0 h-48 w-48 translate-x-1/2 -translate-y-1/2 rounded-full bg-accent-blue/10 blur-3xl" />
-        <div className="relative space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="info">Operational summary</Badge>
-            <Badge variant={reviewCandidates.length > 0 ? 'warning' : 'success'}>
-              {reviewCandidates.length > 0 ? 'Review queue populated' : 'No review candidates yet'}
-            </Badge>
-          </div>
-          <h2 className="text-3xl font-bold tracking-tight md:text-4xl">Admin dashboard with live inventory and review signals</h2>
-          <p className="max-w-3xl text-sm text-muted-foreground md:text-base">
-            This mirrors the source app&apos;s admin overview pattern, but keeps the Booking Own shadcn presentation and reads from the seeded tables.
-          </p>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Badge variant="secondary">Operational summary</Badge>
+          <Badge variant={reviewCandidates.length > 0 ? 'warning' : 'success'}>
+            {reviewCandidates.length > 0 ? 'Review queue populated' : 'No review candidates yet'}
+          </Badge>
         </div>
+        <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Admin dashboard with live inventory and review signals</h2>
+        <p className="max-w-3xl text-sm text-muted-foreground md:text-base">
+          This mirrors the source app&apos;s admin overview pattern, but keeps the Booking Own shadcn presentation and reads from the seeded tables.
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
