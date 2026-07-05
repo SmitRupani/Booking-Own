@@ -1,11 +1,10 @@
-const config = {
+import { defineConfig } from 'drizzle-kit';
+
+export default defineConfig({
   schema: 'src/lib/db/schema.ts',
   out: 'drizzle/migrations',
-  driver: 'pg',
-  // Use env var at runtime to connect when running migrations
+  dialect: 'postgresql',
   dbCredentials: {
-    connectionString: process.env.DATABASE_URL,
+    url: process.env.DATABASE_URL || 'postgres://booking_user:booking_password@localhost:5432/booking_own',
   },
-};
-
-export default config;
+});
