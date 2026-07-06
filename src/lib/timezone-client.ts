@@ -1,0 +1,78 @@
+/**
+ * Client-side timezone utilities for consistent IST (Asia/Kolkata) timezone handling
+ * These are browser-safe versions of the server-side timezone utilities
+ */
+
+/**
+ * Get current time in IST timezone
+ * Returns a Date object representing the current IST time
+ */
+export function getISTNow(): Date {
+    const now = new Date();
+    const istString = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    return new Date(istString);
+}
+
+/**
+ * Get today's date in IST timezone (YYYY-MM-DD format)
+ * Useful for date input fields
+ */
+export function getISTToday(): string {
+    const now = new Date();
+    const options: Intl.DateTimeFormatOptions = {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    };
+    const formatter = new Intl.DateTimeFormat('en-CA', options);
+    return formatter.format(now);
+}
+
+/**
+ * Get start of today in IST (midnight IST)
+ */
+export function getISTTodayStart(): Date {
+    const today = getISTToday();
+    const midnightIST = new Date(`${today}T00:00:00+05:30`);
+    return midnightIST;
+}
+
+/**
+ * Check if a date string is today in IST
+ */
+export function isISTToday(dateString: string): boolean {
+    return dateString === getISTToday();
+}
+
+/**
+ * Format Date object to IST time string (HH:MM)
+ */
+export function formatISTTime(date: Date): string {
+    const istDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const hours = istDate.getHours().toString().padStart(2, '0');
+    const minutes = istDate.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
+/**
+ * Get current IST time as HH:MM string
+ */
+export function getISTCurrentTime(): string {
+    return formatISTTime(getISTNow());
+}
+
+/**
+ * Format a Date object to IST date string (YYYY-MM-DD)
+ * This is useful for converting any Date to IST date format
+ */
+export function formatISTDate(date: Date): string {
+    const options: Intl.DateTimeFormatOptions = {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    };
+    const formatter = new Intl.DateTimeFormat('en-CA', options);
+    return formatter.format(date);
+}

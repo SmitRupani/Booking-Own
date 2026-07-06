@@ -18,6 +18,7 @@ export async function createBooking(domain: {
   userId: number;
   startAt: Date;
   endAt: Date;
+  kind?: string;
 }) {
   const db = getDb();
   const available = await isResourceAvailable(domain.resourceId, domain.startAt, domain.endAt);
@@ -30,6 +31,7 @@ export async function createBooking(domain: {
       userId: domain.userId,
       startAt: domain.startAt,
       endAt: domain.endAt,
+      kind: domain.kind || 'FACILITY',
     })
     .returning();
 
