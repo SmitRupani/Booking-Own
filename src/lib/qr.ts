@@ -4,7 +4,7 @@ import QRCode from 'qrcode';
 const envSecret = process.env.QR_HMAC_SECRET;
 
 if (!envSecret && process.env.NODE_ENV === 'production') {
-  throw new Error('QR_HMAC_SECRET environment variable is required in production');
+  console.warn('⚠️  QR_HMAC_SECRET environment variable is not set');
 }
 
 const QR_SECRET: string = envSecret || 'dev-fallback-secret-do-not-use-in-production';
@@ -22,6 +22,9 @@ export interface QRPayload {
 }
 
 export function generateQRToken(bookingId: string | number, userId: string | number, expiresInMinutes: number): string {
+  if (process.env.NODE_ENV === 'production' && !envSecret) {
+    throw new Error('QR_HMAC_SECRET environment variable is required in production');
+  }
   const now = Math.floor(Date.now() / 1000);
   const exp = now + (expiresInMinutes * 60);
   const nonce = crypto.randomBytes(8).toString('hex');
@@ -46,6 +49,9 @@ export function generateQRToken(bookingId: string | number, userId: string | num
 }
 
 export function verifyQRToken(token: string): { valid: boolean; payload?: QRPayload; error?: string } {
+  if (process.env.NODE_ENV === 'production' && !envSecret) {
+    throw new Error('QR_HMAC_SECRET environment variable is required in production');
+  }
   try {
     const normalizedToken = token.trim();
     const decoded = Buffer.from(normalizedToken, 'base64url').toString('utf-8');

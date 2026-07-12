@@ -1,9 +1,16 @@
-"use client";
+"use client"
 
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
-import { Button } from './Button';
-import { cn } from '@/lib/utils';
+import * as React from "react"
+import {
+  DayPicker,
+  getDefaultClassNames,
+  type DayButton,
+  type Locale,
+} from "react-day-picker"
+
+import { cn } from "@/lib/utils"
+import { Button, buttonVariants } from "@/components/ui/Button"
+import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react"
 
 export type CalendarEvent = {
   id: string;
@@ -13,7 +20,7 @@ export type CalendarEvent = {
   status: string;
 };
 
-export interface CalendarProps {
+export interface LegacyCalendarProps {
   events?: CalendarEvent[];
   onDateClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
@@ -22,284 +29,260 @@ export interface CalendarProps {
   viewDate?: Date;
 }
 
-const typeConfig: Record<string, { emoji: string; color: string; gradient: string }> = {
-  FACILITY: { emoji: '🏟️', color: 'bg-accent-blue', gradient: 'from-accent-blue to-cyan-500' },
-  ROOM: { emoji: '🚪', color: 'bg-accent-purple-1', gradient: 'from-accent-purple-1 to-pink-500' },
-  EQUIPMENT: { emoji: '🎾', color: 'bg-success', gradient: 'from-success to-emerald-400' },
-  LIBRARY: { emoji: '📚', color: 'bg-warning', gradient: 'from-warning to-amber-400' },
-};
+function Calendar({
+  className,
+  classNames,
+  showOutsideDays = true,
+  captionLayout = "label",
+  buttonVariant = "ghost",
+  locale,
+  formatters,
+  components,
+  events = [],
+  onDateClick,
+  onEventClick,
+  onMonthChange,
+  selectedDate,
+  viewDate,
+  ...props
+}: LegacyCalendarProps & Record<string, any>) {
+  const defaultClassNames = getDefaultClassNames()
 
-export function Calendar({ events = [], onDateClick, onEventClick, onMonthChange, selectedDate, viewDate }: CalendarProps) {
-  const [internalDate, setInternalDate] = useState(new Date());
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [animationDirection, setAnimationDirection] = useState<'left' | 'right'>('right');
-  const currentDate = viewDate || internalDate;
+  const dayPickerProps = {
+    showOutsideDays,
+    className: cn(
+      "group/calendar bg-background p-2 [--cell-radius:var(--radius-md)] [--cell-size:--spacing(7)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
+      String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
+      String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
+      className
+    ),
+    captionLayout,
+    locale,
+    onMonthChange,
+    formatters: {
+      formatMonthDropdown: (date: Date) =>
+        date.toLocaleString(locale?.code, { month: "short" }),
+      ...formatters,
+    },
+    classNames: {
+      root: cn("w-fit", defaultClassNames.root),
+      months: cn(
+        "relative flex flex-col gap-4 md:flex-row",
+        defaultClassNames.months
+      ),
+      month: cn("flex w-full flex-col gap-4", defaultClassNames.month),
+      nav: cn(
+        "absolute inset-x-0 top-0 flex w-full items-center justify-between gap-1",
+        defaultClassNames.nav
+      ),
+      button_previous: cn(
+        buttonVariants({ variant: buttonVariant }),
+        "size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
+        defaultClassNames.button_previous
+      ),
+      button_next: cn(
+        buttonVariants({ variant: buttonVariant }),
+        "size-(--cell-size) p-0 select-none aria-disabled:opacity-50",
+        defaultClassNames.button_next
+      ),
+      month_caption: cn(
+        "flex h-(--cell-size) w-full items-center justify-center px-(--cell-size)",
+        defaultClassNames.month_caption
+      ),
+      dropdowns: cn(
+        "flex h-(--cell-size) w-full items-center justify-center gap-1.5 text-sm font-medium",
+        defaultClassNames.dropdowns
+      ),
+      dropdown_root: cn(
+        "relative rounded-(--cell-radius)",
+        defaultClassNames.dropdown_root
+      ),
+      dropdown: cn(
+        "absolute inset-0 bg-popover opacity-0",
+        defaultClassNames.dropdown
+      ),
+      caption_label: cn(
+        "font-medium select-none",
+        captionLayout === "label"
+          ? "text-sm"
+          : "flex items-center gap-1 rounded-(--cell-radius) text-sm [&>svg]:size-3.5 [&>svg]:text-muted-foreground",
+        defaultClassNames.caption_label
+      ),
+      month_grid: cn("w-full border-collapse", defaultClassNames.month_grid),
+      weekdays: cn("flex", defaultClassNames.weekdays),
+      weekday: cn(
+        "flex-1 rounded-(--cell-radius) text-[0.8rem] font-normal text-muted-foreground select-none",
+        defaultClassNames.weekday
+      ),
+      week: cn("mt-2 flex w-full", defaultClassNames.week),
+      week_number_header: cn(
+        "w-(--cell-size) select-none",
+        defaultClassNames.week_number_header
+      ),
+      week_number: cn(
+        "text-[0.8rem] text-muted-foreground select-none",
+        defaultClassNames.week_number
+      ),
+      day: cn(
+        "group/day relative aspect-square h-full w-full rounded-(--cell-radius) p-0 text-center select-none [&:last-child[data-selected=true]_button]:rounded-r-(--cell-radius)",
+        props.showWeekNumber
+          ? "[&:nth-child(2)[data-selected=true]_button]:rounded-l-(--cell-radius)"
+          : "[&:first-child[data-selected=true]_button]:rounded-l-(--cell-radius)",
+        defaultClassNames.day
+      ),
+      range_start: cn(
+        "relative isolate z-0 rounded-l-(--cell-radius) bg-muted after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-muted",
+        defaultClassNames.range_start
+      ),
+      range_middle: cn("rounded-none", defaultClassNames.range_middle),
+      range_end: cn(
+        "relative isolate z-0 rounded-r-(--cell-radius) bg-muted after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-muted",
+        defaultClassNames.range_end
+      ),
+      today: cn(
+        "rounded-(--cell-radius) bg-muted text-foreground data-[selected=true]:rounded-none",
+        defaultClassNames.today
+      ),
+      outside: cn(
+        "text-muted-foreground aria-selected:text-muted-foreground",
+        defaultClassNames.outside
+      ),
+      disabled: cn(
+        "text-muted-foreground opacity-50",
+        defaultClassNames.disabled
+      ),
+      hidden: cn("invisible", defaultClassNames.hidden),
+      ...classNames,
+    },
+    components: {
+      Root: ({ className, rootRef, ...props }: any) => {
+        return (
+          <div
+            data-slot="calendar"
+            ref={rootRef}
+            className={cn(className)}
+            {...props}
+          />
+        )
+      },
+      Chevron: ({ className, orientation, ...props }: any) => {
+        if (orientation === "left") {
+          return (
+            <ChevronLeftIcon className={cn("size-4", className)} {...props} />
+          )
+        }
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+        if (orientation === "right") {
+          return (
+            <ChevronRightIcon className={cn("size-4", className)} {...props} />
+          )
+        }
 
-  const monthEmojis = ['❄️', '💝', '🌸', '🌷', '🌺', '☀️', '🌴', '🌻', '🍂', '🎃', '🍁', '🎄'];
+        return (
+          <ChevronDownIcon className={cn("size-4", className)} {...props} />
+        )
+      },
+      DayButton: ({ ...props }: any) => (
+        <CalendarDayButton locale={locale} events={events} onEventClick={onEventClick} {...props} />
+      ),
+      WeekNumber: ({ children, ...props }: any) => {
+        return (
+          <td {...props}>
+            <div className="flex size-(--cell-size) items-center justify-center text-center">
+              {children}
+            </div>
+          </td>
+        )
+      },
+      ...components,
+    },
+    ...props,
+  } as any;
 
-  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-
-  const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
-  const daysInMonth = lastDayOfMonth.getDate();
-  const startingDayOfWeek = firstDayOfMonth.getDay();
-
-  const getEventsForDate = (date: Date) => {
-    return events.filter(event => {
-      const eventDate = new Date(event.date);
-      return (
-        eventDate.getDate() === date.getDate() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getFullYear() === date.getFullYear()
-      );
-    });
-  };
-
-  const isToday = (date: Date) => {
-    const today = new Date();
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
-  };
-
-  const isSelected = (date: Date) => {
-    if (!selectedDate) return false;
-    return (
-      date.getDate() === selectedDate.getDate() &&
-      date.getMonth() === selectedDate.getMonth() &&
-      date.getFullYear() === selectedDate.getFullYear()
-    );
-  };
-
-  const animateTransition = (direction: 'left' | 'right') => {
-    setAnimationDirection(direction);
-    setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 300);
-  };
-
-  const goToPreviousMonth = () => {
-    animateTransition('right');
-    const newDate = new Date(year, month - 1, 1);
-    if (!viewDate) setInternalDate(newDate);
-    onMonthChange?.(newDate);
-  };
-
-  const goToNextMonth = () => {
-    animateTransition('left');
-    const newDate = new Date(year, month + 1, 1);
-    if (!viewDate) setInternalDate(newDate);
-    onMonthChange?.(newDate);
-  };
-
-  const goToToday = () => {
-    const newDate = new Date();
-    if (!viewDate) setInternalDate(newDate);
-    onMonthChange?.(newDate);
-  };
-
-  const calendarDays = [] as (Date | null)[];
-  for (let i = 0; i < startingDayOfWeek; i++) {
-    calendarDays.push(null);
+  if (selectedDate !== undefined || onDateClick !== undefined) {
+    dayPickerProps.mode = props.mode || "single"
+    dayPickerProps.selected = selectedDate
+    dayPickerProps.onSelect = (date: any) => {
+      if (onDateClick) onDateClick(date)
+      if (props.onSelect) props.onSelect(date)
+    }
   }
-  for (let day = 1; day <= daysInMonth; day++) {
-    calendarDays.push(new Date(year, month, day));
-  }
-
-  const getEventTypeColor = (type: string) => {
-    return typeConfig[type as keyof typeof typeConfig]?.color || 'bg-badge-blue';
-  };
-
-  const getEventTypeEmoji = (type: string) => {
-    return typeConfig[type as keyof typeof typeConfig]?.emoji || '📌';
-  };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between bg-gradient-to-r from-bg-dark/50 to-transparent rounded-xl p-4 border border-card-border/50">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-3xl animate-bounce-subtle">{monthEmojis[month]}</span>
-            <div>
-              <h2 className="text-2xl font-bold text-text-main">
-                {monthNames[month]}
-              </h2>
-              <p className="text-sm text-text-muted">{year}</p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goToToday}
-            className="hidden sm:inline-flex gap-2 group border border-card-border/40"
-          >
-            <CalendarIcon className="h-4 w-4 group-hover:animate-pulse" />
-            Today
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goToPreviousMonth}
-            className="h-10 w-10 p-0 hover:bg-accent-blue/10 hover:border-accent-blue/30 group border border-card-border/30"
-          >
-            <ChevronLeft className="h-5 w-5 group-hover:-translate-x-0.5 transition-transform" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goToNextMonth}
-            className="h-10 w-10 p-0 hover:bg-accent-blue/10 hover:border-accent-blue/30 group border border-card-border/30"
-          >
-            <ChevronRight className="h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
-          </Button>
-        </div>
-      </div>
-
-      <div className={cn(
-        "rounded-2xl border border-card-border bg-card overflow-hidden shadow-xl transition-all duration-300",
-        isAnimating && animationDirection === 'left' && 'animate-fade-in-left',
-        isAnimating && animationDirection === 'right' && 'animate-fade-in-right'
-      )}>
-        <div className="grid grid-cols-7 bg-gradient-to-r from-bg-dark via-bg-dark to-bg-dark/80">
-          {daysOfWeek.map((day) => (
-            <div
-              key={day}
-              className="p-4 text-center"
-            >
-              <span className="text-sm font-semibold text-text-muted uppercase tracking-wider">
-                {day}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7 gap-px bg-card-border/50">
-          {calendarDays.map((date, index) => {
-            if (!date) {
-              return (
-                <div
-                  key={`empty-${index}`}
-                  className="min-h-[90px] sm:min-h-[120px] bg-bg-very-dark/20"
-                />
-              );
-            }
-
-            const dayEvents = getEventsForDate(date);
-            const isCurrentDay = isToday(date);
-            const isSelectedDay = isSelected(date);
-            const hasEvents = dayEvents.length > 0;
-
-            return (
-              <div
-                key={date.toISOString()}
-                onClick={() => onDateClick?.(date)}
-                className={cn(
-                  'min-h-[90px] sm:min-h-[120px] p-2 transition-all duration-200 cursor-pointer bg-card relative group',
-                  'hover:bg-accent-blue/5 hover:shadow-inner',
-                  isCurrentDay && 'bg-gradient-to-br from-accent-blue/15 to-accent-blue/5',
-                  isSelectedDay && 'bg-gradient-to-br from-accent-purple-1/15 to-accent-purple-1/5 ring-2 ring-accent-purple-1/30 ring-inset',
-                  hasEvents && 'font-medium'
-                )}
-              >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-br from-accent-blue/5 to-transparent" />
-                </div>
-
-                <div className="flex flex-col h-full relative">
-                  <div
-                    className={cn(
-                      'text-sm mb-2 w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300',
-                      isCurrentDay && 'bg-gradient-to-br from-accent-blue to-cyan-500 text-white font-bold shadow-lg shadow-accent-blue/40 animate-pulse',
-                      isSelectedDay && !isCurrentDay && 'bg-gradient-to-br from-accent-purple-1 to-pink-500 text-white shadow-lg shadow-accent-purple-1/40',
-                      !isCurrentDay && !isSelectedDay && 'text-text-main group-hover:bg-bg-dark group-hover:scale-110'
-                    )}
-                  >
-                    {date.getDate()}
-                  </div>
-
-                  {isCurrentDay && (
-                    <div className="absolute top-1 right-1">
-                      <Sparkles className="h-3 w-3 text-accent-blue animate-pulse" />
-                    </div>
-                  )}
-
-                  <div className="flex-1 space-y-1 overflow-hidden">
-                    {dayEvents.slice(0, 3).map((event, eventIndex) => (
-                      <div
-                        key={event.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEventClick?.(event);
-                        }}
-                        className={cn(
-                          'text-[10px] sm:text-xs px-2 py-1 rounded-lg truncate text-white cursor-pointer',
-                          'transition-all duration-200 hover:scale-[1.02] hover:shadow-md',
-                          'flex items-center gap-1',
-                          getEventTypeColor(event.type)
-                        )}
-                        style={{ animationDelay: `${eventIndex * 50}ms` }}
-                      >
-                        <span className="hidden sm:inline text-xs">{getEventTypeEmoji(event.type)}</span>
-                        <span className="truncate">{event.title}</span>
-                      </div>
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <div
-                        className="text-xs text-accent-blue px-2 font-medium cursor-pointer hover:text-accent-purple-1 transition-colors flex items-center gap-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDateClick?.(date);
-                        }}
-                      >
-                        <span>+{dayEvents.length - 3}</span>
-                        <span className="hidden sm:inline">more</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {hasEvents && (
-                    <div className="absolute bottom-1 right-1 sm:hidden">
-                      <div className="w-5 h-5 rounded-full bg-accent-blue/20 flex items-center justify-center">
-                        <span className="text-[10px] font-bold text-accent-blue">{dayEvents.length}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 p-4 bg-bg-dark/30 rounded-xl border border-card-border/50">
-        <span className="text-xs text-text-muted font-medium">Legend:</span>
-        {Object.entries(typeConfig).map(([type, config]) => (
-          <div key={type} className="flex items-center gap-2 group cursor-default">
-            <div className={cn(
-              'w-4 h-4 rounded-lg transition-transform group-hover:scale-110',
-              config.color
-            )}>
-              <span className="text-[10px] flex items-center justify-center h-full">{config.emoji}</span>
-            </div>
-            <span className="text-sm text-text-muted group-hover:text-text-main transition-colors">
-              {type.charAt(0) + type.slice(1).toLowerCase()}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+    <DayPicker {...dayPickerProps} />
+  )
 }
 
-export default Calendar;
+function CalendarDayButton({
+  className,
+  day,
+  modifiers,
+  locale,
+  events = [],
+  onEventClick,
+  ...props
+}: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale>; events?: CalendarEvent[]; onEventClick?: (event: CalendarEvent) => void }) {
+  const defaultClassNames = getDefaultClassNames()
+
+  const ref = React.useRef<HTMLButtonElement>(null)
+  React.useEffect(() => {
+    if (modifiers.focused) ref.current?.focus()
+  }, [modifiers.focused])
+
+  const dateEvents = React.useMemo(() => {
+    return events.filter(e => {
+      const ed = new Date(e.date)
+      return ed.getDate() === day.date.getDate() &&
+             ed.getMonth() === day.date.getMonth() &&
+             ed.getFullYear() === day.date.getFullYear()
+    })
+  }, [events, day.date])
+
+  return (
+    <div className="relative flex items-center justify-center w-full h-full">
+      <Button
+        ref={ref}
+        variant="ghost"
+        size="icon"
+        data-day={day.date.toLocaleDateString(locale?.code)}
+        data-selected-single={
+          modifiers.selected &&
+          !modifiers.range_start &&
+          !modifiers.range_end &&
+          !modifiers.range_middle
+        }
+        data-range-start={modifiers.range_start}
+        data-range-end={modifiers.range_end}
+        data-range-middle={modifiers.range_middle}
+        className={cn(
+          "relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col gap-1 border-0 leading-none font-normal group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-[3px] group-data-[focused=true]/day:ring-ring/50 data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-muted data-[range-middle=true]:text-foreground data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground dark:hover:text-foreground [&>span]:text-xs [&>span]:opacity-70",
+          defaultClassNames.day,
+          className
+        )}
+        {...props}
+      />
+      {dateEvents.length > 0 && (
+        <div className="absolute bottom-1 z-20 flex gap-0.5 items-center justify-center pointer-events-auto">
+          {dateEvents.slice(0, 3).map(ev => (
+            <span
+              key={ev.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onEventClick) onEventClick(ev);
+              }}
+              className="text-[8px] cursor-pointer"
+              title={ev.title}
+            >
+              {ev.type === 'FACILITY' && '🏟️'}
+              {ev.type === 'ROOM' && '🚪'}
+              {ev.type === 'EQUIPMENT' && '🎾'}
+              {ev.type === 'LIBRARY' && '📚'}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+export { Calendar, CalendarDayButton }
+export default Calendar

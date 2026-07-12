@@ -7,6 +7,8 @@ import { bookings, resources } from '@/lib/db/schema';
 import { getDb } from '@/lib/db/client';
 import { desc, eq } from 'drizzle-orm';
 
+export const dynamic = 'force-dynamic';
+
 function formatDateTime(value: Date | string) {
   return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',

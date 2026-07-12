@@ -4,6 +4,8 @@ import { getDb } from '@/lib/db/client';
 import { auditLogs } from '@/lib/db/schema';
 import { desc } from 'drizzle-orm';
 
+export const dynamic = 'force-dynamic';
+
 function formatDate(value: string | Date) {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }

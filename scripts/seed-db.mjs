@@ -124,12 +124,12 @@ async function main() {
     );
 
     await client.query(
-      `INSERT INTO bookings (resource_id, user_id, start_at, end_at)
+      `INSERT INTO bookings (resource_id, user_id, start_at, end_at, kind)
        VALUES
-         ($1, $2, $3, $4),
-         ($5, $6, $7, $8),
-         ($9, $10, $11, $12),
-         ($13, $14, $15, $16)`,
+         ($1, $2, $3, $4, 'FACILITY'),
+         ($5, $6, $7, $8, 'ROOM'),
+         ($9, $10, $11, $12, 'EQUIPMENT'),
+         ($13, $14, $15, $16, 'ROOM')`,
       [
         1,
         1,

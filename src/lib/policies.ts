@@ -196,6 +196,7 @@ export const POLICIES = {
   GROUP_BOOKING_REPLY_TIME_MINUTES: 10, // 10 minutes for friends to respond
   GROUP_BOOKING_CUTOFF_MINUTES: 5, // Must be confirmed 5 minutes before start
   GROUP_BOOKING_TEAM_SPORTS: ['Main Turf', 'Basketball Court', 'Volleyball Court'], // Sports that require groups
+  ROOM_BOOKING_MIN_LEAD_MINUTES: 30,
 } as const;
 
 export function canUserBook(user: {
