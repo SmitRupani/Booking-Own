@@ -1,179 +1,160 @@
+import { redirect } from 'next/navigation';
+import { requireAuth } from '@/lib/auth/guards';
+import { getDb } from '@/lib/db/client';
+import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { POLICIES, loadDynamicPolicies } from '@/lib/policies';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, StatCard } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import Table, { TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/Table';
-import { getDb } from '@/lib/db/client';
-import { bookings, resources } from '@/lib/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { AlertTriangle, ShieldCheck, Clock, CheckCircle2, Info, Ban } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-function formatDateTime(value: Date | string) {
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
-}
-
-export default async function PenaltiesPage() {
+export default async function PenaltyGuidePage() {
+  const authUser = await requireAuth(['STUDENT', 'ADMIN']);
   const db = getDb();
-  const bookingRows = await db
-    .select({
-      id: bookings.id,
-      startAt: bookings.startAt,
-      endAt: bookings.endAt,
-      resourceName: resources.name,
-      resourceCategory: resources.category,
-    })
-    .from(bookings)
-    .leftJoin(resources, eq(bookings.resourceId, resources.id))
-    .orderBy(desc(bookings.endAt));
+
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, authUser.id))
+    .limit(1);
+
+  if (!user) redirect('/login');
 
   const now = new Date();
-  const pastBookings = bookingRows.filter((booking) => new Date(booking.endAt) < now);
-  const activeBookings = bookingRows.filter((booking) => new Date(booking.startAt) <= now && new Date(booking.endAt) >= now);
-  const upcomingBookings = bookingRows.filter((booking) => new Date(booking.startAt) > now);
-  const totalHours = pastBookings.reduce((sum, booking) => sum + (new Date(booking.endAt).getTime() - new Date(booking.startAt).getTime()) / 36e5, 0);
+  const isSuspended = user.suspendedUntil && new Date(user.suspendedUntil) > now;
+  const isBlocked = user.blocked;
+  const points = user.penaltyPoints || 0;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 p-6">
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Badge variant="warning">Rules & penalties</Badge>
-          <Badge variant="secondary">Live booking history</Badge>
+    <div className="mx-auto max-w-5xl space-y-6 p-4 sm:p-6">
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Badge variant={isBlocked ? 'destructive' : isSuspended ? 'warning' : 'success'}>
+            {isBlocked ? 'Account Blocked' : isSuspended ? 'Suspended' : 'Good Standing'}
+          </Badge>
+          <Badge variant="secondary">{points} Penalty Points</Badge>
         </div>
-        <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">Penalty review guide backed by seeded bookings</h2>
-        <p className="max-w-3xl text-sm text-muted-foreground md:text-base">
-          This keeps the source app&apos;s information structure: booking limits, penalty rules, escalation guidance, and a review queue, but renders it with Booking Own&apos;s shadcn cards and tables.
+        <h1 className="text-3xl font-bold tracking-tight">Rules & Penalty Status</h1>
+        <p className="text-sm text-muted-foreground">
+          Overview of campus resource policies, your disciplinary standing, and penalty recovery guidelines.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Past bookings" value={pastBookings.length} emoji="⏮️" />
-        <StatCard label="Active bookings" value={activeBookings.length} emoji="⏳" />
-        <StatCard label="Upcoming bookings" value={upcomingBookings.length} emoji="⏭️" />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardDescription>Limit summary</CardDescription>
-            <CardTitle>{pastBookings.length > 0 ? 'Review-ready' : 'No history yet'}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">{totalHours.toFixed(1)} hours of past booking history are available for review.</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Review trigger</CardDescription>
-            <CardTitle>Completed bookings</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">Completed bookings are the primary source for no-show and late-return review candidates.</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Open status</CardDescription>
-            <CardTitle>{activeBookings.length > 0 ? 'Active usage' : 'Idle queue'}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">Active bookings help surface items that may still be in progress.</CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Next check</CardDescription>
-            <CardTitle>{upcomingBookings.length > 0 ? 'Upcoming usage' : 'No upcoming load'}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">Upcoming bookings are useful for planning the review timeline.</CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardDescription>Penalty rules</CardDescription>
-            <CardTitle>Review guidance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li className="rounded-lg border p-4">No-shows may be reviewed against past bookings that ended before now.</li>
-              <li className="rounded-lg border p-4">Late returns can be flagged from active or recently completed bookings.</li>
-              <li className="rounded-lg border p-4">This page is read-only and uses seeded booking data as the verification source.</li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardDescription>Escalation flow</CardDescription>
-            <CardTitle>What happens when review finds an issue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <div className="rounded-lg border p-4">
-                <p className="font-medium text-foreground">Level 0</p>
-                <p>First review stage for a new booking issue.</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="font-medium text-foreground">Level 1</p>
-                <p>Escalated review for repeat or unresolved cases.</p>
-              </div>
-              <div className="rounded-lg border p-4">
-                <p className="font-medium text-foreground">Level 2</p>
-                <p>Critical review bucket used for persistent issues.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardDescription>Penalty review queue</CardDescription>
-          <CardTitle>Recent completed bookings</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {pastBookings.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No completed bookings were seeded yet.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <tr>
-                  <th className="px-3 py-2 text-left">Resource</th>
-                  <th className="px-3 py-2 text-left">Category</th>
-                  <th className="px-3 py-2 text-left">Start</th>
-                  <th className="px-3 py-2 text-left">End</th>
-                </tr>
-              </TableHeader>
-              <TableBody>
-                {pastBookings.slice(0, 4).map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell className="font-medium">{booking.resourceName ?? `Resource #${booking.id}`}</TableCell>
-                    <TableCell className="capitalize">{booking.resourceCategory ?? 'unassigned'}</TableCell>
-                    <TableCell>{formatDateTime(booking.startAt)}</TableCell>
-                    <TableCell>{formatDateTime(booking.endAt)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardDescription>FAQ</CardDescription>
-          <CardTitle>How to read this page</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border p-4 text-sm text-muted-foreground">
-              <p className="mb-2 font-medium text-foreground">What do the stats mean?</p>
-              <p>Past bookings, active bookings, and upcoming bookings are pulled directly from the seeded booking rows.</p>
-            </div>
-            <div className="rounded-lg border p-4 text-sm text-muted-foreground">
-              <p className="mb-2 font-medium text-foreground">What should I check first?</p>
-              <p>Confirm completed bookings are visible, then compare the counts to the dashboard and bookings pages.</p>
-            </div>
+      {/* Disciplinary Banner */}
+      {isBlocked ? (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-5 flex items-start gap-4 text-destructive">
+          <Ban className="w-8 h-8 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold">Account Permanently Blocked</h3>
+            <p className="text-sm opacity-90">
+              Your account has been restricted due to repeat policy violations. Please contact the campus operations desk.
+            </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      ) : isSuspended ? (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 flex items-start gap-4 text-amber-400">
+          <AlertTriangle className="w-8 h-8 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold">Temporary Suspension Active</h3>
+            <p className="text-sm opacity-90">
+              Your booking privileges are suspended until{' '}
+              {new Date(user.suspendedUntil!).toLocaleDateString('en-IN', {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric',
+              })}.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 flex items-start gap-4 text-emerald-400">
+          <ShieldCheck className="w-8 h-8 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold">Your Account is in Good Standing</h3>
+            <p className="text-sm opacity-90">
+              You have full access to reserve sports turfs, study rooms, equipment kits, and library volumes.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Metric Cards */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Penalty Points" value={points} emoji="⚠️" />
+        <StatCard label="Penalty Threshold" value="4 Points" emoji="🎯" />
+        <StatCard label="Advance Booking Window" value="7 Days" emoji="📅" />
+      </div>
+
+      {/* Rules Policy Grid */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
+              Booking & Slot Invariants
+            </CardTitle>
+            <CardDescription>Rules to follow for smooth reservations</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div className="p-3 rounded-lg border bg-card/40 flex items-start gap-3">
+              <span className="text-lg">🏟️</span>
+              <div>
+                <p className="font-semibold text-foreground">Sports Facilities</p>
+                <p className="text-xs mt-0.5">Maximum 2 active facility bookings at any given time.</p>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg border bg-card/40 flex items-start gap-3">
+              <span className="text-lg">🚪</span>
+              <div>
+                <p className="font-semibold text-foreground">Study & Meeting Rooms</p>
+                <p className="text-xs mt-0.5">Slots range from 30 mins to 2 hours maximum per session.</p>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg border bg-card/40 flex items-start gap-3">
+              <span className="text-lg">🎾</span>
+              <div>
+                <p className="font-semibold text-foreground">Sports & Lab Gear</p>
+                <p className="text-xs mt-0.5">Same-day return for equipment unless explicit faculty approval granted.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              Violation Penalties
+            </CardTitle>
+            <CardDescription>Points assigned for policy infractions</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-card/40">
+              <div>
+                <p className="font-semibold text-foreground">No-Show Violation</p>
+                <p className="text-xs text-muted-foreground">Not checking in within 15 min of slot start</p>
+              </div>
+              <Badge variant="destructive">+2 Points</Badge>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-card/40">
+              <div>
+                <p className="font-semibold text-foreground">Late Equipment Return</p>
+                <p className="text-xs text-muted-foreground">Returning gear after slot window ends</p>
+              </div>
+              <Badge variant="destructive">+1 Point</Badge>
+            </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border bg-card/40">
+              <div>
+                <p className="font-semibold text-foreground">Damaged Item</p>
+                <p className="text-xs text-muted-foreground">Returning equipment in non-working condition</p>
+              </div>
+              <Badge variant="destructive">+2 Points</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

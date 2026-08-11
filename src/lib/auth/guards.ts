@@ -1,7 +1,6 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { cookies } from 'next/headers';
 import { getDb } from '@/lib/db/client';
-const db = getDb();
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { AuthenticationError, AuthorizationError } from '@/lib/errors';
@@ -47,39 +46,109 @@ function verifyGuardSessionCookie(
   }
 }
 
+/**
+ * Ensures an authenticated Clerk user has a corresponding row in the database.
+ * Auto-provisions the user if they belong to an allowed domain.
+ */
+async function getOrProvisionClerkUser(clerkUser: NonNullable<Awaited<ReturnType<typeof currentUser>>>) {
+  const db = getDb();
+  const email =
+    clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ||
+    clerkUser.emailAddresses[0]?.emailAddress;
+
+  if (!email) {
+    throw new AuthenticationError('No primary email found in authentication profile');
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // 1. Check if user already exists
+  const existing = await db
+    .select({
+      id: users.id,
+      role: users.role,
+      suspendedUntil: users.suspendedUntil,
+      penaltyPoints: users.penaltyPoints,
+      blocked: users.blocked,
+      email: users.email,
+      name: users.name,
+      clerkId: users.clerkId,
+    })
+    .from(users)
+    .where(eq(users.email, normalizedEmail))
+    .limit(1);
+
+  let dbUser = existing[0];
+
+  // 2. If user does not exist in DB, auto-provision
+  if (!dbUser) {
+    const emailDomain = normalizedEmail.split('@')[1] || '';
+    const allowedStudentDomain = (process.env.ALLOWED_STUDENT_DOMAIN || 'sst.scaler.com').toLowerCase();
+    const allowedAdminDomain = (process.env.ALLOWED_ADMIN_DOMAIN || 'scaler.com').toLowerCase();
+    const validDomains = [allowedStudentDomain, allowedAdminDomain, 'sst.scaler.com', 'scaler.com'];
+
+    const adminEmails = (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+
+    const isExplicitAdmin = adminEmails.includes(normalizedEmail);
+    const isAdminDomain = emailDomain === allowedAdminDomain || emailDomain === 'scaler.com';
+    const assignedRole: UserRole = isExplicitAdmin || isAdminDomain ? 'ADMIN' : 'STUDENT';
+
+    const isDev = process.env.NODE_ENV !== 'production';
+    const isAllowedDomain = validDomains.includes(emailDomain);
+
+    if (!isAllowedDomain && !isDev) {
+      throw new AuthorizationError(
+        'Access restricted to authorized Scaler School of Technology accounts.'
+      );
+    }
+
+    const displayName =
+      clerkUser.fullName ||
+      (clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ''}`.trim() : null) ||
+      normalizedEmail.split('@')[0];
+
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        name: displayName,
+        email: normalizedEmail,
+        role: assignedRole,
+        penaltyPoints: 0,
+        clerkId: clerkUser.id,
+      })
+      .returning({
+        id: users.id,
+        role: users.role,
+        suspendedUntil: users.suspendedUntil,
+        penaltyPoints: users.penaltyPoints,
+        blocked: users.blocked,
+        email: users.email,
+        name: users.name,
+        clerkId: users.clerkId,
+      });
+
+    dbUser = newUser;
+  } else if (!dbUser.clerkId && clerkUser.id) {
+    // Attach clerkId if not yet set
+    await db
+      .update(users)
+      .set({ clerkId: clerkUser.id })
+      .where(eq(users.id, dbUser.id));
+  }
+
+  return dbUser;
+}
+
 export async function requireAuth(allowedRoles?: UserRole[]) {
   // ── 1. Try Clerk auth first ──────────────────────────────────────────────
   try {
     const clerkUser = await currentUser();
 
     if (clerkUser) {
-      const email = clerkUser.emailAddresses.find(
-        (e) => e.id === clerkUser.primaryEmailAddressId
-      )?.emailAddress;
-
-      if (!email) throw new AuthenticationError('No email found');
-
-      const results = await db
-        .select({
-          id: users.id,
-          role: users.role,
-          suspendedUntil: users.suspendedUntil,
-          penaltyPoints: users.penaltyPoints,
-          blocked: users.blocked,
-          email: users.email,
-          name: users.name,
-        })
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1);
-
-      const dbUser = results[0];
-
-      if (!dbUser) {
-        throw new AuthenticationError(
-          'User not found. Please contact administrator.'
-        );
-      }
+      const dbUser = await getOrProvisionClerkUser(clerkUser);
 
       if (dbUser.blocked) {
         throw new AuthorizationError(
@@ -88,9 +157,7 @@ export async function requireAuth(allowedRoles?: UserRole[]) {
       }
 
       if (dbUser.suspendedUntil && dbUser.suspendedUntil > new Date()) {
-        const suspendedUntil = new Date(
-          dbUser.suspendedUntil
-        ).toLocaleDateString('en-IN', {
+        const suspendedUntil = new Date(dbUser.suspendedUntil).toLocaleDateString('en-IN', {
           day: 'numeric',
           month: 'short',
           year: 'numeric',
@@ -138,6 +205,7 @@ export async function requireAuth(allowedRoles?: UserRole[]) {
     throw new AuthorizationError();
   }
 
+  const db = getDb();
   const results = await db
     .select({
       id: users.id,
@@ -176,25 +244,7 @@ export async function getSession() {
   try {
     const clerkUser = await currentUser();
     if (clerkUser) {
-      const email = clerkUser.emailAddresses.find(
-        (e) => e.id === clerkUser.primaryEmailAddressId
-      )?.emailAddress;
-      if (!email) return null;
-
-      const results = await db
-        .select({
-          id: users.id,
-          email: users.email,
-          name: users.name,
-          role: users.role,
-        })
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1);
-
-      const dbUser = results[0];
-      if (!dbUser) return null;
-
+      const dbUser = await getOrProvisionClerkUser(clerkUser);
       return {
         user: {
           id: dbUser.id,
@@ -222,6 +272,7 @@ export async function getSession() {
     );
     if (!sessionPayload) return null;
 
+    const db = getDb();
     const results = await db
       .select({
         id: users.id,

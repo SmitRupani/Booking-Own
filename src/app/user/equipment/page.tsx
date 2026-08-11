@@ -19,7 +19,7 @@ import {
   ShieldAlert,
   Sparkles,
 } from 'lucide-react';
-import { POLICIES } from '@/lib/policies';
+import { POLICIES } from '@/lib/policies-constants';
 import { getMaxQuantityForItem } from '@/lib/sportEquipmentKits';
 
 interface EquipmentItem {
@@ -78,7 +78,7 @@ export default function EquipmentPage() {
   const handleIncrement = (item: EquipmentItem) => {
     const current = selectedItems[item.id] || 0;
     const maxPolicy = item.sportCategory
-      ? getMaxQuantityForItem(item.name, item.sportCategory)
+      ? getMaxQuantityForItem(item.name, item.sportCategory as any)
       : 2;
     const available = item.qtyAvailable;
     const maxAllowed = Math.min(maxPolicy, available);
@@ -189,7 +189,7 @@ export default function EquipmentPage() {
         </p>
       </div>
 
-      {error && <ErrorDisplay error={error} onDismiss={() => setError('')} />}
+      {error && <ErrorDisplay message={error} onRetry={() => setError('')} />}
 
       <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelectedItems({}); }}>
         <TabsList className="grid w-full max-w-md grid-cols-2">

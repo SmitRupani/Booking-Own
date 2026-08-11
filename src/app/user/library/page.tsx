@@ -139,7 +139,7 @@ export default function LibraryPage() {
         </p>
       </div>
 
-      {error && <ErrorDisplay error={error} onDismiss={() => setError('')} />}
+      {error && <ErrorDisplay message={error} onRetry={() => setError('')} />}
 
       {/* Search Input */}
       <div className="relative max-w-md">

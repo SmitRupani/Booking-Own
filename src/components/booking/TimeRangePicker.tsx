@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { POLICIES } from '@/lib/policies';
+import { POLICIES } from '@/lib/policies-constants';
 import { cn } from '@/lib/utils';
 import { AlertCircle, CheckCircle2, ChevronDown, Zap, Clock, Sparkles } from 'lucide-react';
 

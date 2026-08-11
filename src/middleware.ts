@@ -11,6 +11,11 @@ const isPublicRoute = createRouteMatcher([
   "/api/approve/(.*)",
   "/api/cron",
   "/api/group-bookings/expire",
+  "/api/policies/client",
+  "/api/resources(.*)",
+  "/api/availability(.*)",
+  "/api/isbn/(.*)",
+  "/api/admin/equipment(.*)",
   "/approval-result(.*)",
   "/dev-test(.*)",
   "/",
@@ -118,7 +123,6 @@ export default clerkMiddleware(async (auth, request) => {
   // For guard-specific routes, verify guard_session cookie
   const isUserMeRoute = path === "/api/user/me";
   if (isGuardRoute(request)) {
-    // Allow /api/user/me for Clerk-authenticated users as well
     if (isUserMeRoute && userId) {
       return NextResponse.next();
     }
@@ -133,19 +137,23 @@ export default clerkMiddleware(async (auth, request) => {
       }
     }
 
+    if (path.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
   // Redirect to login if not authenticated via Clerk or Guard
   if (!userId) {
-    // Check if guard is trying to access other routes or if completely unauthenticated
     const guardAccessKey = process.env.GUARD_ACCESS_KEY;
     const guardSession = request.cookies.get("guard_session")?.value;
 
     if (guardAccessKey && guardSession) {
       const isValidGuard = await verifyGuardToken(guardSession, guardAccessKey);
       if (isValidGuard) {
-        // Guard is logged in, redirect to guard scanner if trying to access user/admin routes
+        if (path.startsWith("/api/")) {
+          return NextResponse.next();
+        }
         if (!path.startsWith("/guard")) {
           return NextResponse.redirect(new URL("/guard/scanner", request.url));
         }
@@ -153,8 +161,8 @@ export default clerkMiddleware(async (auth, request) => {
       }
     }
 
-    if (path.startsWith("/admin")) {
-      return NextResponse.redirect(new URL("/login", request.url));
+    if (path.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return NextResponse.redirect(new URL("/login", request.url));
   }

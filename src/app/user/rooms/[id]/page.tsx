@@ -12,7 +12,7 @@ import { ErrorDisplay } from '@/components/ui/ErrorDisplay';
 import { ArrowLeft, MapPin, Users, CheckCircle2, DoorOpen } from 'lucide-react';
 import Link from 'next/link';
 import { getISTToday, formatISTDate } from '@/lib/timezone-client';
-import { POLICIES } from '@/lib/policies';
+import { POLICIES } from '@/lib/policies-constants';
 import type { BusySlot } from '@/components/booking/TimeRangePicker';
 
 const TimeRangePicker = dynamic(
@@ -218,7 +218,7 @@ export default function RoomBookingPage({
         </div>
       )}
 
-      {error && <ErrorDisplay error={error} onDismiss={() => setError('')} />}
+      {error && <ErrorDisplay message={error} onRetry={() => setError('')} />}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* 1. Date Selector */}
@@ -230,9 +230,8 @@ export default function RoomBookingPage({
           <CardContent>
             <DatePicker
               value={date}
-              onChange={setDate}
+              onChange={(d) => setDate(typeof d === 'string' ? d : d.toISOString().split('T')[0])}
               minDate={getISTToday()}
-              maxDays={POLICIES.ADVANCE_BOOKING_DAYS}
             />
           </CardContent>
         </Card>
@@ -242,7 +241,7 @@ export default function RoomBookingPage({
           <CardHeader>
             <CardTitle className="text-lg">2. Select Time Slot</CardTitle>
             <CardDescription>
-              Select an open duration on {formatISTDate(date)}
+              Select an open duration on {formatISTDate(new Date(date))}
             </CardDescription>
           </CardHeader>
           <CardContent>

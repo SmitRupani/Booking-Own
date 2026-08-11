@@ -1,5 +1,6 @@
-// System-wide booking policies and rules
 import { getNow, toIST } from './timezone';
+import { POLICIES } from './policies-constants';
+export { POLICIES };
 
 // Cache for runtime policy values (refreshed from DB)
 let policyCache: Map<string, number> | null = null;
@@ -76,128 +77,7 @@ export async function loadDynamicPolicies<K extends keyof typeof POLICIES>(
   return result;
 }
 
-export const POLICIES = {
-  // Booking limits
-  MAX_ACTIVE_FACILITIES: 2,
-  MAX_ACTIVE_ROOMS: 1,
 
-  MAX_SPORTS_EQUIPMENT_ITEMS_PER_BOOKING: 3,
-  MAX_LAB_EQUIPMENT_ITEMS_PER_BOOKING: 1,
-
-  // Daily limits (per type - more granular control)
-  MAX_FACILITY_BOOKINGS_PER_DAY: 3,   // Max 3 facility bookings per day
-  MAX_ROOM_BOOKINGS_PER_DAY: 2,       // Max 2 room bookings per day
-  MAX_EQUIPMENT_BOOKINGS_PER_DAY: 5,  // Max 5 equipment borrows per day
-  MAX_LIBRARY_BOOKINGS_PER_DAY: 1,    // Max 1 library borrow per day (matches MAX_BOOKS_PER_STUDENT)
-  MAX_TOTAL_ACTIVE_BOOKINGS: 3, // Max 3 active bookings across all types
-
-  // Monthly limits (hours)
-  MAX_FACILITY_HOURS_PER_MONTH: 15, // 15 hours of facility time per month
-  MAX_ROOM_HOURS_PER_MONTH: 8,      // 8 hours of room time per month
-  MAX_EQUIPMENT_BORROWS_PER_MONTH: 20, // 20 equipment borrows per month
-
-  // Consecutive booking prevention
-  MIN_GAP_BETWEEN_BOOKINGS_MINUTES: 0, // Gap removed to allow back-to-back bookings
-  MAX_CONSECUTIVE_SLOTS: 2, // Can't book more than 2 consecutive slots for same resource type
-
-  // Dynamic slot booking constraints (global defaults)
-  MIN_BOOKING_DURATION_MINUTES: 15, // Minimum 15 minutes per booking
-  MAX_BOOKING_DURATION_MINUTES: 120, // Maximum 2 hours per booking
-  WORKING_HOURS_START: 8, // 8 AM IST
-  WORKING_HOURS_END: 20,  // 8 PM IST
-
-  // Per-type duration defaults: Facilities
-  MIN_DURATION_FACILITY: 15,
-  MAX_DURATION_FACILITY: 120,
-  HOURS_START_FACILITY: 8,
-  HOURS_END_FACILITY: 20,
-
-  // Per-type duration defaults: Rooms
-  MIN_DURATION_ROOM: 15,
-  MAX_DURATION_ROOM: 120,
-  HOURS_START_ROOM: 8,
-  HOURS_END_ROOM: 20,
-
-  // Per-type duration defaults: Sports Equipment
-  MIN_DURATION_SPORTS: 15,
-  MAX_DURATION_SPORTS: 120, // align with facility max duration
-  HOURS_START_SPORTS: 8,
-  HOURS_END_SPORTS: 20,
-
-  // Per-type duration defaults: Lab Equipment (now dynamic: 1 hour to 7 days)
-  MIN_DURATION_LAB: 60,       // 1 hour minimum
-  MAX_DURATION_LAB: 10080,    // 7 days maximum (in minutes)
-  HOURS_START_LAB: 8,
-  HOURS_END_LAB: 20,
-
-  // Cancellation limits
-  LATE_CANCELLATION_HOURS: 24,  // Cancel within 24h of start = late cancellation
-
-  // Advance booking window
-  ADVANCE_BOOKING_DAYS: 7,
-
-  // Slot durations (minutes) - legacy, kept for compatibility
-  FACILITY_SLOT_MINUTES: 60,
-  ROOM_SLOT_MINUTES: 60,
-  SPORTS_EQUIPMENT_BORROW_MINUTES: 120,   // Up to 120 minutes for sports equipment (matches facility cap)
-  LAB_EQUIPMENT_BORROW_MINUTES: 10080,    // Up to 7 days for lab equipment
-  LIBRARY_BOOK_BORROW_MINUTES: 20160, // 14 days for library books
-
-  // Equipment extension rules
-  MAX_EQUIPMENT_EXTENSION_MINUTES: 60, // Max 60 mins extension per booking
-  MAX_EXTENSIONS_PER_BOOKING: 1,       // Only 1 extension allowed per booking
-
-  // Auto-cancel timings
-  NO_SHOW_GRACE_MINUTES: 30,  // 30 minutes grace period before marking as no-show/cancelled
-
-  // QR validity windows (minutes)
-  QR_VALIDITY_BEFORE_START: 15, // Can generate QR 15 min before booking start
-  QR_VALIDITY_AFTER_START: 30,  // Can generate QR up to 30 min after booking start (matches grace period)
-  QR_EQUIPMENT_PICKUP_WINDOW: 10, // QR expires 10 min after generation
-
-  // Reschedule policies
-  MAX_RESCHEDULE_PER_BOOKING: 1,           // Only 1 reschedule per booking
-  MAX_RESCHEDULE_PER_MONTH: 3,             // Max 3 reschedules per month
-  RESCHEDULE_PENALTY_POINTS: 0,            // No penalty for reschedule (keeps slot filled, better than cancel)
-  RESCHEDULE_BLOCK_WINDOW_HOURS: 2,        // Cannot reschedule within 2 hours
-
-  // Penalties
-  // System uses 4x multiplier: 0.25 points = 1, 0.5 points = 2, 1 point = 4, 2 points = 8
-  PENALTY_NO_SHOW: 4,          // 1 point
-  PENALTY_LATE_RETURN: 4,      // 1 point
-  PENALTY_DAMAGE: 8,           // 2 points
-  PENALTY_CANCELLATION: 0,     // No penalty for early cancellation
-  PENALTY_LATE_CANCELLATION: 2, // 0.5 points (late cancellation within 24h of start)
-  PENALTY_BOOK_LATE_RETURN: 8, // 2 points
-  PENALTY_BOOK_NO_PICKUP: 2,   // 0.5 points
-
-  // Escalating penalty system (Three-Strike System)
-  PENALTY_THRESHOLD_LEVEL_0: 20,  // First offense threshold
-  PENALTY_THRESHOLD_LEVEL_1: 10,  // Second offense threshold
-  PENALTY_THRESHOLD_LEVEL_2: 10,  // Third offense threshold -> Ban
-  SUSPENSION_DURATION_LEVEL_0: 7,  // 7 days for first suspension
-  SUSPENSION_DURATION_LEVEL_1: 10, // 10 days for second suspension
-
-  // Legacy alias kept for calculateSuspensionDate()
-  SUSPENSION_DAYS: 7,
-
-  // Special rules
-  SHARED_TURF_GROUP_ID: 'TURF-1', // Football & Cricket share this
-  LAB_EQUIPMENT_REQUIRES_APPROVAL: true,
-
-  // Library rules
-  MAX_BOOKS_PER_STUDENT: 1, // Only 1 book at a time
-  LIBRARY_BOOK_PICKUP_WINDOW_HOURS: 24, // Must pick up within 24 hours
-
-  // Group booking rules
-  GROUP_BOOKING_MIN_MEMBERS: 6, // Minimum 6 people for team sports
-  GROUP_BOOKING_MIN_REPLY_TIME_HOURS: 10 / 60, // 10 minutes for friends to respond (0.167 hours) - LEGACY
-  GROUP_BOOKING_FINALIZATION_CUTOFF_HOURS: 5 / 60, // Group must be finalized at least 5 minutes before booking start - LEGACY
-  GROUP_BOOKING_REPLY_TIME_MINUTES: 10, // 10 minutes for friends to respond
-  GROUP_BOOKING_CUTOFF_MINUTES: 5, // Must be confirmed 5 minutes before start
-  GROUP_BOOKING_TEAM_SPORTS: ['Main Turf', 'Basketball Court', 'Volleyball Court'], // Sports that require groups
-  ROOM_BOOKING_MIN_LEAD_MINUTES: 30,
-} as const;
 
 export function canUserBook(user: {
   penaltyPoints: number;

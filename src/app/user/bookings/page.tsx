@@ -1,20 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay';
 import {
   QrCode,
   Calendar,
   Clock,
-  MapPin,
   XCircle,
   RefreshCw,
-  Sparkles,
   Package,
 } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -109,7 +107,7 @@ export default function BookingsPage() {
       case 'CONFIRMED':
         return <Badge variant="success">Confirmed</Badge>;
       case 'CHECKED_IN':
-        return <Badge variant="primary">Checked In</Badge>;
+        return <Badge variant="default">Checked In</Badge>;
       case 'PENDING':
         return <Badge variant="warning">Pending Approval</Badge>;
       case 'CANCELLED':
@@ -145,7 +143,7 @@ export default function BookingsPage() {
         </Button>
       </div>
 
-      {error && <ErrorDisplay error={error} onDismiss={() => setError('')} />}
+      {error && <ErrorDisplay message={error} onRetry={() => setError('')} />}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
         <TabsList className="grid w-full max-w-xs grid-cols-2">
@@ -177,7 +175,7 @@ export default function BookingsPage() {
                         </span>
                         {getStatusBadge(booking.status)}
                         {booking.isGroupBooking && (
-                          <Badge variant="outline">Group Booking</Badge>
+                          <Badge variant="secondary">Group Booking</Badge>
                         )}
                       </div>
 
@@ -249,10 +247,9 @@ export default function BookingsPage() {
 
       {/* QR Code Pass Modal */}
       <Modal
-        open={qrModal.open}
-        onOpenChange={(open) => setQrModal({ ...qrModal, open })}
+        isOpen={qrModal.open}
+        onClose={() => setQrModal({ open: false })}
         title="Gate Verification QR Pass"
-        description="Present this QR code to campus security guards upon arrival or return."
       >
         <div className="flex flex-col items-center justify-center p-4 space-y-4">
           {qrModal.qrUrl && (
