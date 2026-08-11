@@ -39,13 +39,19 @@ export default function AdminLabApprovalsPage() {
   const fetchPending = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/bookings');
+      const res = await fetch('/api/admin/lab-approvals');
       if (res.ok) {
         const data = await res.json();
-        const pending = (data.bookings || []).filter(
-          (b: any) => b.status === 'PENDING'
-        );
-        setPendingList(pending);
+        setPendingList(data.bookings || []);
+      } else {
+        const altRes = await fetch('/api/bookings');
+        if (altRes.ok) {
+          const data = await altRes.json();
+          const pending = (data.bookings || []).filter(
+            (b: any) => b.status === 'PENDING' || b.approval === 'PENDING'
+          );
+          setPendingList(pending);
+        }
       }
     } catch {
       setError('Failed to load pending approval requests');
@@ -60,11 +66,12 @@ export default function AdminLabApprovalsPage() {
 
   const handleApprove = async (bookingId: number) => {
     setSubmitting(true);
+    setError('');
     try {
-      const res = await fetch('/api/bookings', {
-        method: 'PATCH',
+      const res = await fetch(`/api/admin/approvals/${bookingId}`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: bookingId, status: 'CONFIRMED' }),
+        body: JSON.stringify({ action: 'approve' }),
       });
       if (res.ok) {
         fetchPending();
@@ -82,14 +89,14 @@ export default function AdminLabApprovalsPage() {
   const handleReject = async () => {
     if (!rejectingBooking) return;
     setSubmitting(true);
+    setError('');
     try {
-      const res = await fetch('/api/bookings', {
-        method: 'PATCH',
+      const res = await fetch(`/api/admin/approvals/${rejectingBooking.id}`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: rejectingBooking.id,
-          status: 'CANCELLED',
-          rejectReason: rejectReason.trim() || undefined,
+          action: 'reject',
+          reason: rejectReason.trim() || undefined,
         }),
       });
       if (res.ok) {
@@ -173,6 +180,13 @@ export default function AdminLabApprovalsPage() {
                     <div className="p-3 rounded-lg border bg-card/60 text-xs">
                       <p className="font-semibold text-muted-foreground">Purpose / Coursework:</p>
                       <p className="mt-0.5 text-foreground">{booking.borrowReason}</p>
+                    </div>
+                  )}
+
+                  {booking.items && booking.items.length > 0 && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Package className="w-3.5 h-3.5 text-primary" />
+                      Items: {booking.items.map((i) => `${i.name} (x${i.qty})`).join(', ')}
                     </div>
                   )}
 

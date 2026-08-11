@@ -13,7 +13,7 @@ import {
 import { sendEmail, generateApprovalEmailHTML, getApprovalEmailRecipients } from '@/lib/email';
 import { formatDateTime } from '@/lib/utils';
 import { bookingSchema } from '@/lib/validations/booking';
-import { handleApiError, ValidationError, NotFoundError, ConflictError } from '@/lib/errors';
+import { handleApiError, ValidationError, NotFoundError, ConflictError, AuthorizationError } from '@/lib/errors';
 import { toIST } from '@/lib/timezone';
 import { canUserCreateBookingWithCaps } from '@/lib/bookingRules';
 import { canBorrowSportCategory } from '@/lib/sportCategoryRules';
@@ -636,5 +636,114 @@ async function postHandler(req: Request) {
   }
 }
 
+async function patchHandler(req: NextRequest) {
+  try {
+    const user = await requireAuth();
+    const body = await req.json();
+    const { id, status, rejectReason, cancelReason } = body;
+
+    if (!id) {
+      throw new ValidationError('Booking ID is required');
+    }
+
+    const bookingList = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, Number(id)))
+      .limit(1);
+
+    const booking = bookingList[0];
+    if (!booking) {
+      throw new NotFoundError('Booking');
+    }
+
+    // Authorization: User can only modify their own booking; ADMIN can approve/reject/cancel any
+    if (user.role !== 'ADMIN' && booking.userId !== user.id) {
+      throw new AuthorizationError('You do not have permission to modify this booking');
+    }
+
+    const updates: Partial<typeof bookings.$inferInsert> = {};
+
+    if (status === 'CONFIRMED') {
+      if (user.role !== 'ADMIN') {
+        throw new AuthorizationError('Only administrators can approve bookings');
+      }
+      updates.status = 'CONFIRMED';
+      updates.approval = 'APPROVED';
+      updates.approvedBy = String(user.id);
+      updates.approvedAt = new Date();
+    } else if (status === 'CANCELLED') {
+      updates.status = 'CANCELLED';
+      if (booking.approval === 'PENDING') {
+        updates.approval = 'REJECTED';
+      }
+      if (rejectReason) {
+        updates.rejectionReason = rejectReason;
+      }
+      if (cancelReason || rejectReason) {
+        updates.overrideReason = cancelReason || rejectReason;
+      }
+    } else if (status) {
+      updates.status = status;
+    }
+
+    const [updatedBooking] = await db
+      .update(bookings)
+      .set(updates)
+      .where(eq(bookings.id, booking.id))
+      .returning();
+
+    // Clean up approval tokens if resolved
+    if (status === 'CONFIRMED' || status === 'CANCELLED') {
+      await db.delete(approvalTokens).where(eq(approvalTokens.bookingId, booking.id));
+    }
+
+    return NextResponse.json({ booking: updatedBooking, success: true });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+async function deleteHandler(req: NextRequest) {
+  try {
+    const user = await requireAuth();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      throw new ValidationError('Booking ID is required');
+    }
+
+    const bookingList = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, Number(id)))
+      .limit(1);
+
+    const booking = bookingList[0];
+    if (!booking) {
+      throw new NotFoundError('Booking');
+    }
+
+    if (user.role !== 'ADMIN' && booking.userId !== user.id) {
+      throw new AuthorizationError('You do not have permission to cancel this booking');
+    }
+
+    const [updatedBooking] = await db
+      .update(bookings)
+      .set({ status: 'CANCELLED' })
+      .where(eq(bookings.id, booking.id))
+      .returning();
+
+    await db.delete(approvalTokens).where(eq(approvalTokens.bookingId, booking.id));
+
+    return NextResponse.json({ booking: updatedBooking, success: true });
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
 export const GET = withRateLimit(getHandler, 30, 60000);
 export const POST = withRateLimit(postHandler);
+export const PATCH = withRateLimit(patchHandler);
+export const DELETE = withRateLimit(deleteHandler);
