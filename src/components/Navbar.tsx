@@ -153,7 +153,7 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center gap-1 overflow-x-auto py-1">
+          <div className="hidden lg:flex items-center gap-1 overflow-x-auto py-1 no-scrollbar">
             {links.map((l) => {
               const isActive = pathname === l.href;
               return (
