@@ -25,13 +25,15 @@ export default function AdminLoginPageClient() {
     } catch (err) {
       console.error('Admin Sign in error:', err);
       setError('Failed to initiate Google sign in. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
+      {/* Smart CAPTCHA container required by Clerk */}
+      <div id="clerk-captcha" className="hidden" />
+
       <Card className="w-full max-w-md border shadow-2xl">
         <CardHeader className="space-y-3 text-center pt-8">
           <div className="flex justify-center">
@@ -57,7 +59,7 @@ export default function AdminLoginPageClient() {
           <Button
             onClick={handleAdminSignIn}
             disabled={loading}
-            className="w-full h-12 gap-2 text-sm font-semibold"
+            className="w-full h-12 gap-2 text-sm font-semibold cursor-pointer"
           >
             <Sparkles className="w-4 h-4" />
             {loading ? 'Connecting to Google SSO...' : 'Sign In with Google (@scaler.com)'}

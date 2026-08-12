@@ -4,42 +4,46 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { Modal } from '@/components/ui/Modal';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay';
 import {
-  QrCode,
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
+  QrCode,
   XCircle,
-  RefreshCw,
+  Copy,
+  Check,
   Package,
 } from 'lucide-react';
-import QRCode from 'qrcode';
 
 interface Booking {
   id: number;
   resourceId: number;
   resourceName?: string;
-  resourceCategory?: string;
-  kind: 'FACILITY' | 'ROOM' | 'EQUIPMENT' | 'LIBRARY';
+  kind?: string;
+  items?: { name: string; qty: number }[];
   startAt: string;
   endAt: string;
-  status: 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED';
+  status: string;
+  approval?: string;
   qrCode?: string;
-  items?: { name: string; qty: number }[];
-  isGroupBooking?: boolean;
 }
 
-export default function BookingsPage() {
+export default function UserBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'active' | 'history'>('active');
   const [error, setError] = useState('');
+  const [tab, setTab] = useState<'active' | 'history'>('active');
+  const [copiedToken, setCopiedToken] = useState(false);
+
+  // QR Modal State
   const [qrModal, setQrModal] = useState<{
     open: boolean;
     qrUrl?: string;
+    token?: string;
     booking?: Booking;
+    loading?: boolean;
   }>({ open: false });
 
   const fetchBookings = useCallback(async () => {
@@ -70,16 +74,28 @@ export default function BookingsPage() {
   );
 
   const handleShowQR = async (booking: Booking) => {
+    setQrModal({ open: true, loading: true, booking });
     try {
-      const token = booking.qrCode || `SST-QR-${booking.id}-${Date.now()}`;
-      const qrDataUrl = await QRCode.toDataURL(token, {
-        width: 300,
-        margin: 2,
-        color: { dark: '#000000', light: '#ffffff' },
+      const res = await fetch(`/api/bookings/${booking.id}/qr`, {
+        method: 'POST',
       });
-      setQrModal({ open: true, qrUrl: qrDataUrl, booking });
+      if (res.ok) {
+        const data = await res.json();
+        setQrModal({
+          open: true,
+          qrUrl: data.qrImage,
+          token: data.token,
+          booking,
+          loading: false,
+        });
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to generate gate pass QR');
+        setQrModal({ open: false });
+      }
     } catch {
       setError('Failed to render QR Code');
+      setQrModal({ open: false });
     }
   };
 
@@ -99,6 +115,14 @@ export default function BookingsPage() {
       }
     } catch {
       setError('Error communicating with cancellation service.');
+    }
+  };
+
+  const copyToken = () => {
+    if (qrModal.token) {
+      navigator.clipboard.writeText(qrModal.token);
+      setCopiedToken(true);
+      setTimeout(() => setCopiedToken(false), 2000);
     }
   };
 
@@ -129,36 +153,31 @@ export default function BookingsPage() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight mt-1">My Reservations & Loans</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your room and court bookings, view gate pass QR codes, and review loan histories.
+            Manage your facility slots, room bookings, and generate gate pass QR codes.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchBookings}
-          className="gap-1.5 self-start"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </Button>
       </div>
 
       {error && <ErrorDisplay message={error} onRetry={() => setError('')} />}
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-        <TabsList className="grid w-full max-w-xs grid-cols-2">
-          <TabsTrigger value="active">Active ({activeBookings.length})</TabsTrigger>
-          <TabsTrigger value="history">History ({historyBookings.length})</TabsTrigger>
+      <Tabs value={tab} onValueChange={(val) => setTab(val as any)} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-xs mb-4">
+          <TabsTrigger value="active">Active & Upcoming ({activeBookings.length})</TabsTrigger>
+          <TabsTrigger value="history">Past History ({historyBookings.length})</TabsTrigger>
         </TabsList>
 
-        <div className="mt-6 space-y-4">
+        <div className="space-y-3">
           {loading ? (
-            <div className="py-16 text-center text-muted-foreground animate-pulse">
+            <div className="py-12 text-center text-muted-foreground animate-pulse">
               Loading your bookings...
             </div>
           ) : currentList.length === 0 ? (
             <Card className="border-dashed py-12 text-center text-muted-foreground">
-              <p className="text-sm">No reservations found in this view.</p>
+              <p className="text-sm">
+                {tab === 'active'
+                  ? 'No active reservations found. Explore facilities to book your next slot!'
+                  : 'No past booking records.'}
+              </p>
             </Card>
           ) : (
             currentList.map((booking) => {
@@ -167,36 +186,35 @@ export default function BookingsPage() {
 
               return (
                 <Card key={booking.id} className="border hover:border-primary/40 transition-all">
-                  <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-2">
+                  <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-primary">
-                          {booking.kind}
+                        <span className="font-semibold text-base">
+                          {booking.resourceName || `Booking #${booking.id}`}
                         </span>
                         {getStatusBadge(booking.status)}
-                        {booking.isGroupBooking && (
-                          <Badge variant="secondary">Group Booking</Badge>
+                        {booking.kind && (
+                          <Badge variant="secondary" className="text-xs uppercase">
+                            {booking.kind}
+                          </Badge>
                         )}
                       </div>
 
-                      <h3 className="text-lg font-bold">
-                        {booking.resourceName || `Resource #${booking.resourceId}`}
-                      </h3>
-
                       {booking.items && booking.items.length > 0 && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Package className="w-3.5 h-3.5 text-primary" />
-                          Items: {booking.items.map((it) => `${it.name} (x${it.qty})`).join(', ')}
+                          Items: {booking.items.map((i) => `${i.name} (x${i.qty})`).join(', ')}
                         </p>
                       )}
 
-                      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground pt-1">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5 text-primary" />
+                          <CalendarIcon className="w-3.5 h-3.5 text-primary" />
                           {start.toLocaleDateString('en-IN', {
                             weekday: 'short',
                             day: 'numeric',
                             month: 'short',
+                            year: 'numeric',
                           })}
                         </span>
                         <span className="flex items-center gap-1">
@@ -224,7 +242,7 @@ export default function BookingsPage() {
                             className="gap-1.5"
                           >
                             <QrCode className="w-4 h-4 text-primary" />
-                            Pass QR
+                            Gate Pass QR
                           </Button>
                           <Button
                             size="sm"
@@ -252,24 +270,58 @@ export default function BookingsPage() {
         title="Gate Verification QR Pass"
       >
         <div className="flex flex-col items-center justify-center p-4 space-y-4">
-          {qrModal.qrUrl && (
-            <div className="p-4 bg-white rounded-2xl shadow-xl">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={qrModal.qrUrl}
-                alt="Booking Gate Pass QR Code"
-                className="w-56 h-56 object-contain"
-              />
+          {qrModal.loading ? (
+            <div className="py-12 text-center text-muted-foreground animate-pulse">
+              Generating secure HMAC QR pass...
             </div>
+          ) : (
+            <>
+              {qrModal.qrUrl && (
+                <div className="p-4 bg-white rounded-2xl shadow-xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={qrModal.qrUrl}
+                    alt="Booking Gate Pass QR Code"
+                    className="w-56 h-56 object-contain"
+                  />
+                </div>
+              )}
+
+              <div className="text-center space-y-1">
+                <p className="text-sm font-semibold">
+                  {qrModal.booking?.resourceName || `Booking #${qrModal.booking?.id}`}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Present this QR code or manual token to security guard at the gate.
+                </p>
+              </div>
+
+              {qrModal.token && (
+                <div className="w-full bg-card/60 border rounded-lg p-2.5 flex items-center justify-between gap-2 text-xs font-mono">
+                  <span className="truncate">{qrModal.token}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={copyToken}
+                    className="h-7 px-2 text-xs gap-1"
+                  >
+                    {copiedToken ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
-          <div className="text-center space-y-1">
-            <p className="text-sm font-semibold">
-              {qrModal.booking?.resourceName || `Booking #${qrModal.booking?.id}`}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Valid for check-in during your reserved slot.
-            </p>
-          </div>
+
           <Button
             className="w-full"
             variant="outline"

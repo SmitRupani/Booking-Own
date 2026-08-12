@@ -130,15 +130,15 @@ async function getOrProvisionClerkUser(clerkUser: NonNullable<Awaited<ReturnType
 
     dbUser = newUser;
   } else {
-    // 3. Sync ADMIN role if user was elevated in ADMIN_EMAILS or domain
-    const shouldUpdateRole = (isExplicitAdmin || isAdminDomain) && dbUser.role !== 'ADMIN';
+    // 3. Sync role strictly based on ADMIN_EMAILS and domain
+    const shouldUpdateRole = dbUser.role !== targetRole && dbUser.role !== 'GUARD';
     const shouldUpdateClerkId = !dbUser.clerkId && !!clerkUser.id;
 
     if (shouldUpdateRole || shouldUpdateClerkId) {
       const [updatedUser] = await db
         .update(users)
         .set({
-          ...(shouldUpdateRole ? { role: 'ADMIN' } : {}),
+          ...(shouldUpdateRole ? { role: targetRole } : {}),
           ...(shouldUpdateClerkId ? { clerkId: clerkUser.id } : {}),
         })
         .where(eq(users.id, dbUser.id))

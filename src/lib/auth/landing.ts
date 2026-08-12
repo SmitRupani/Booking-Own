@@ -106,46 +106,77 @@ export async function resolveLandingPath(): Promise<string> {
   }
 
   if (clerkUser) {
-    const email = clerkUser.emailAddresses[0]?.emailAddress;
+    const email =
+      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)?.emailAddress ||
+      clerkUser.emailAddresses[0]?.emailAddress;
+
     if (!email) {
       return '/login';
     }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailDomain = normalizedEmail.split('@')[1] || '';
+    const allowedStudentDomain = (process.env.ALLOWED_STUDENT_DOMAIN || 'sst.scaler.com').toLowerCase();
+    const allowedAdminDomain = (process.env.ALLOWED_ADMIN_DOMAIN || 'scaler.com').toLowerCase();
+    const validDomains = [allowedStudentDomain, allowedAdminDomain, 'sst.scaler.com', 'scaler.com'];
+
+    const adminEmails = (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+
+    const isExplicitAdmin = adminEmails.includes(normalizedEmail);
+    const isAdminDomain = emailDomain === allowedAdminDomain || emailDomain === 'scaler.com';
+    const targetRole = isExplicitAdmin || isAdminDomain ? 'ADMIN' : 'STUDENT';
 
     const db = getDb();
     const [existingUser] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(eq(users.email, normalizedEmail))
       .limit(1);
 
     let user = existingUser;
 
     if (!user) {
-      const validDomains = ['sst.scaler.com', 'scaler.com'];
-      const emailDomain = email.split('@')[1];
+      const isDev = process.env.NODE_ENV !== 'production';
+      const isAllowedDomain = validDomains.includes(emailDomain);
 
-      if (validDomains.includes(emailDomain)) {
-        const [newUser] = await db
-          .insert(users)
-          .values({
-            name: clerkUser.fullName || clerkUser.firstName || email.split('@')[0],
-            email,
-            role: 'STUDENT',
-            penaltyPoints: 0,
-            clerkId: clerkUser.id,
-          })
-          .returning();
-        user = newUser;
-      } else {
+      if (!isAllowedDomain && !isDev) {
         return '/login?error=invalid_domain';
       }
-    } else if (!user.clerkId && clerkUser.id) {
-      const [updated] = await db
-        .update(users)
-        .set({ clerkId: clerkUser.id })
-        .where(eq(users.id, user.id))
+
+      const displayName =
+        clerkUser.fullName ||
+        (clerkUser.firstName ? `${clerkUser.firstName} ${clerkUser.lastName || ''}`.trim() : null) ||
+        normalizedEmail.split('@')[0];
+
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          name: displayName,
+          email: normalizedEmail,
+          role: targetRole,
+          penaltyPoints: 0,
+          clerkId: clerkUser.id,
+        })
         .returning();
-      user = updated;
+      user = newUser;
+    } else {
+      const shouldUpdateRole = user.role !== targetRole && user.role !== 'GUARD';
+      const shouldUpdateClerkId = !user.clerkId && !!clerkUser.id;
+
+      if (shouldUpdateRole || shouldUpdateClerkId) {
+        const [updated] = await db
+          .update(users)
+          .set({
+            ...(shouldUpdateRole ? { role: targetRole } : {}),
+            ...(shouldUpdateClerkId ? { clerkId: clerkUser.id } : {}),
+          })
+          .where(eq(users.id, user.id))
+          .returning();
+        user = updated;
+      }
     }
 
     if (user.role === 'GUARD') {

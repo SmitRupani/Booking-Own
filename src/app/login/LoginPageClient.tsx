@@ -3,7 +3,6 @@
 import { useSignIn } from '@clerk/nextjs';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -106,13 +105,15 @@ function LoginContent() {
   const handleGoogleSignIn = async () => {
     if (!signIn) return;
     setLoading(true);
+    setError('');
     try {
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/sso-callback',
         redirectUrlComplete: '/',
       });
-    } catch {
+    } catch (err) {
+      console.error('Sign in error:', err);
       setError('Sign in failed. Please try again.');
       setLoading(false);
     }
@@ -155,6 +156,9 @@ function LoginContent() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 overflow-hidden text-slate-100">
+      {/* Smart CAPTCHA container required by Clerk */}
+      <div id="clerk-captcha" className="hidden" />
+
       {/* Ambient background glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-blue-500/10 blur-3xl" />
@@ -214,11 +218,18 @@ function LoginContent() {
                 Sign in to reserve sports facilities, study rooms, and equipment.
               </p>
 
+              {error && (
+                <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 text-xs text-destructive flex items-center gap-2">
+                  <span>❌</span>
+                  <span>{error}</span>
+                </div>
+              )}
+
               {/* Google Sign In */}
               <button
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-white hover:bg-slate-100 text-slate-900 font-semibold text-sm transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? (
                   <div className="h-5 w-5 border-2 border-slate-300 border-t-blue-500 rounded-full animate-spin" />

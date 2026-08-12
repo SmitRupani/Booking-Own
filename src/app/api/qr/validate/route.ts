@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db/client';
-const db = getDb();
 import { bookings, qrTokens, users, resources, equipmentItems } from '@/lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth/guards';
@@ -8,6 +7,8 @@ import { verifyQRToken } from '@/lib/qr';
 import { handleApiError, ValidationError, NotFoundError, ConflictError } from '@/lib/errors';
 import { getAvailableQuantity } from '@/lib/inventory';
 import { parseStudentEmail } from '@/lib/utils';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,6 +21,8 @@ export async function POST(req: NextRequest) {
       throw new ValidationError('Token required');
     }
 
+    const db = getDb();
+
     const result = await db.transaction(async (tx: any) => {
       const dbTokenList = await tx
         .select()
@@ -28,7 +31,7 @@ export async function POST(req: NextRequest) {
         .limit(1);
 
       const dbToken = dbTokenList[0];
-      if (!dbToken) throw new NotFoundError('Token');
+      if (!dbToken) throw new NotFoundError('QR Token');
 
       const verification = verifyQRToken(normalizedToken);
       if (!verification.valid) {
@@ -43,7 +46,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (new Date().getTime() > new Date(dbToken.expiresAt).getTime()) {
-        throw new ValidationError('Token expired');
+        throw new ValidationError('QR Token expired. Please generate a new QR pass.');
       }
 
       const bookingList = await tx
@@ -55,16 +58,12 @@ export async function POST(req: NextRequest) {
       const booking = bookingList[0];
       if (!booking) throw new NotFoundError('Booking');
 
-      if (booking.kind !== 'EQUIPMENT') {
-        throw new ValidationError('QR validation is only for equipment pickup');
-      }
-
       if (booking.status === 'CHECKED_IN') {
-        throw new ConflictError('Equipment already checked in');
+        throw new ConflictError('Pass already checked in');
       }
 
       if (!['CONFIRMED', 'PENDING'].includes(booking.status)) {
-        throw new ValidationError('Booking is not in a valid state for check-in');
+        throw new ValidationError(`Booking is ${booking.status} and not valid for check-in.`);
       }
 
       const bookingOwnerList = await tx
@@ -75,6 +74,10 @@ export async function POST(req: NextRequest) {
 
       const bookingOwner = bookingOwnerList[0];
       if (!bookingOwner) throw new NotFoundError('Booking owner');
+
+      if (bookingOwner.blocked) {
+        throw new ValidationError('User account is permanently blocked');
+      }
 
       if (bookingOwner.suspendedUntil && bookingOwner.suspendedUntil > new Date()) {
         throw new ValidationError('User is currently suspended');
@@ -92,6 +95,7 @@ export async function POST(req: NextRequest) {
         throw new ValidationError('Resource is currently inactive');
       }
 
+      // If equipment, verify and deduct available quantity
       const items = booking.items as Array<{ itemId: number; name: string; qty: number }> | null;
       if (items && items.length > 0) {
         const itemIds = items.map((i: any) => i.itemId);
