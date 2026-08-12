@@ -273,24 +273,6 @@ async function postHandler(req: Request) {
     const GRACE_PERIOD_MS = 2 * 60 * 1000;
     const nowWithGrace = new Date(Date.now() - GRACE_PERIOD_MS);
 
-    if (startDate < nowWithGrace) {
-      throw new ValidationError('Cannot book in the past');
-    }
-
-    const startIST = toIST(startDate);
-    const endIST = toIST(endDate);
-    const startHour = startIST.getHours();
-    const endHour = endIST.getHours();
-    const endMinutes = endIST.getMinutes();
-
-    if (startHour < dynamicPolicies.WORKING_HOURS_START) {
-      throw new ValidationError(`Bookings cannot start before ${dynamicPolicies.WORKING_HOURS_START}:00 AM`);
-    }
-
-    if (endHour > dynamicPolicies.WORKING_HOURS_END || (endHour === dynamicPolicies.WORKING_HOURS_END && endMinutes > 0)) {
-      throw new ValidationError(`Bookings cannot end after ${dynamicPolicies.WORKING_HOURS_END % 12 || 12}:00 PM`);
-    }
-
     if (!user) throw new NotFoundError('User');
 
     const canBook = canUserBook(user);
@@ -302,8 +284,37 @@ async function postHandler(req: Request) {
       throw new NotFoundError('Resource');
     }
 
+    let kind: 'FACILITY' | 'ROOM' | 'EQUIPMENT' | 'LIBRARY';
+    if (validationResult.data.kind && ['FACILITY', 'ROOM', 'EQUIPMENT', 'LIBRARY'].includes(validationResult.data.kind)) {
+      kind = validationResult.data.kind;
+    } else if (resource.category === 'equipment' || resource.type === 'LAB_EQUIPMENT' || resource.type === 'SPORTS_EQUIPMENT') {
+      kind = 'EQUIPMENT';
+    } else if (resource.category === 'room' || resource.type === 'ROOM') {
+      kind = 'ROOM';
+    } else if (resource.category === 'library' || resource.type === 'LIBRARY') {
+      kind = 'LIBRARY';
+    } else {
+      kind = 'FACILITY';
+    }
+
+    const startIST = toIST(startDate);
+    const endIST = toIST(endDate);
+    const startHour = startIST.getHours();
+    const endHour = endIST.getHours();
+    const endMinutes = endIST.getMinutes();
+
+    if (kind === 'FACILITY' || kind === 'ROOM') {
+      if (startHour < dynamicPolicies.WORKING_HOURS_START) {
+        throw new ValidationError(`Bookings cannot start before ${dynamicPolicies.WORKING_HOURS_START}:00 AM`);
+      }
+
+      if (endHour > dynamicPolicies.WORKING_HOURS_END || (endHour === dynamicPolicies.WORKING_HOURS_END && endMinutes > 0)) {
+        throw new ValidationError(`Bookings cannot end after ${dynamicPolicies.WORKING_HOURS_END % 12 || 12}:00 PM`);
+      }
+    }
+
     const operatingHours = resource.operatingHours as any;
-    if (operatingHours?.useCustom && operatingHours.schedule) {
+    if (operatingHours?.useCustom && operatingHours.schedule && (kind === 'FACILITY' || kind === 'ROOM')) {
       const dayOfWeek = startIST.getDay();
       const daySchedule = operatingHours.schedule[dayOfWeek];
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -319,13 +330,6 @@ async function postHandler(req: Request) {
       if (endHour > daySchedule.endHour || (endHour === daySchedule.endHour && endMinutes > 0)) {
         throw new ValidationError(`${resource.name} closes at ${daySchedule.endHour}:00 on ${dayNames[dayOfWeek]}s`);
       }
-    }
-
-    let kind: 'FACILITY' | 'ROOM' | 'EQUIPMENT' | 'LIBRARY';
-    if (resource.type === 'LAB_EQUIPMENT' || resource.type === 'SPORTS_EQUIPMENT') {
-      kind = 'EQUIPMENT';
-    } else {
-      kind = (resource.type || 'FACILITY') as 'FACILITY' | 'ROOM' | 'EQUIPMENT' | 'LIBRARY';
     }
 
     if (kind !== 'EQUIPMENT' && !isWithinAdvanceWindow(startDate)) {

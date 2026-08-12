@@ -112,6 +112,16 @@ export default function EquipmentPage() {
       return;
     }
 
+    const needsApproval = selectedList.some((s) => {
+      const item = items.find((it) => String(it.id) === s.itemId);
+      return item?.requiresApproval;
+    });
+
+    if (needsApproval && !borrowReason.trim()) {
+      setError('Please provide a coursework or project reason for borrowing specialized lab equipment.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -125,12 +135,18 @@ export default function EquipmentPage() {
         end.setDate(end.getDate() + labDurationDays);
       }
 
-      // First resource as container
-      const firstItem = items.find((it) => selectedItems[it.id] > 0);
-      const resourceId = firstItem?.resourceId || 1;
+      // Retrieve parent resourceId dynamically from the selected item
+      const selectedItemIds = Object.keys(selectedItems).map(Number);
+      const firstSelectedItem = items.find((it) => selectedItemIds.includes(it.id));
+
+      if (!firstSelectedItem || !firstSelectedItem.resourceId) {
+        setError('Unable to determine resource container for selected item.');
+        setLoading(false);
+        return;
+      }
 
       const payload = {
-        resourceId,
+        resourceId: firstSelectedItem.resourceId,
         kind: 'EQUIPMENT',
         start: now.toISOString(),
         end: end.toISOString(),
